@@ -1,0 +1,285 @@
+import 'package:flutter/material.dart';
+import 'dart:io';
+import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:lootbazarweb/core/theme.dart';
+import 'package:lootbazarweb/providerd/register/RegisterNotifier.dart';
+import 'package:lootbazarweb/route/AppRoutes.dart';
+import 'package:lootbazarweb/shared/AppTextStyle.dart';
+import 'package:lootbazarweb/shared/PremiumLoadingButton.dart';
+
+
+class ProfileScreen extends ConsumerStatefulWidget {
+  const ProfileScreen({super.key});
+
+  @override
+  ConsumerState<ProfileScreen> createState() => _ProfileScreenState();
+}
+
+class _ProfileScreenState extends ConsumerState<ProfileScreen> {
+  final nameController = TextEditingController();
+  final addressController = TextEditingController();
+  final pincodeController = TextEditingController();
+  final formKey = GlobalKey<FormState>();
+
+  File? _pickedImage;
+
+  @override
+  void dispose() {
+    nameController.dispose();
+    addressController.dispose();
+    pincodeController.dispose();
+    //ref.read(profileProvider.notifier).reset();
+    super.dispose();
+  }
+
+  Future<void> _pickImage() async {
+    final picker = ImagePicker();
+    final picked = await picker.pickImage(
+      source: ImageSource.gallery,
+      imageQuality: 80,
+    );
+    if (picked != null) {
+      setState(() {
+        _pickedImage = File(picked.path);
+      });
+    }
+  }
+
+  void _onSubmitTap() {
+    if (!formKey.currentState!.validate()) return;
+    FocusScope.of(context).unfocus();
+    ref.read(registerProvider.notifier).localStore(
+      userName: nameController.text.trim(),
+      userAddress: addressController.text.trim(),
+      userPinCode: pincodeController.text.trim(),
+      userImage: _pickedImage?.path??'',
+    );
+    context.goNamed(AppRoutes.interestScreen);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    /* final profileState = ref.watch(profileProvider);
+
+    // Navigation/error - screen level
+    ref.listen<ProfileState>(profileProvider, (previous, next) {
+      if (next.isSuccess && next.data != null) {
+        context.goNamed(AppRoutes.homeScreen);
+      }
+      if (next.errorMessage != null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(next.errorMessage!),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    });
+*/
+    return AnnotatedRegion(
+      value: SystemUiOverlayStyle(
+        statusBarColor: AppTheme.background,
+        statusBarIconBrightness: Brightness.light,
+        systemNavigationBarIconBrightness: Brightness.light,
+      ),
+      child: SafeArea(
+        top: true,
+        bottom: false,
+        child: Scaffold(
+          extendBody: true,
+          resizeToAvoidBottomInset: false,
+          backgroundColor: AppTheme.background,
+          body: SingleChildScrollView(
+            keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+            physics: const BouncingScrollPhysics(),
+            child: Padding(
+              padding: EdgeInsets.symmetric(horizontal: 22.w),
+              child: Form(
+                key: formKey,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    60.verticalSpace,
+                    Text(
+                      'Setup your\nprofile',
+                      style: AppTextStyle.semiBold(
+                        size: 34.sp,
+                        height: 1.0,
+                        color: Colors.black,
+                      ),
+                    ),
+                    14.verticalSpace,
+                    Text(
+                      'Add your details so others can recognize you',
+                      style: AppTextStyle.light(
+                        size: 12.sp,
+                        color: AppTheme.subtext,
+                      ),
+                    ),
+                    30.verticalSpace,
+
+                    // Profile Image Picker
+                    Center(
+                      child: GestureDetector(
+                        onTap: _pickImage,
+                        child: Stack(
+                          children: [
+                            CircleAvatar(
+                              radius: 55.r,
+                              backgroundColor: Colors.orange.withOpacity(0.1),
+                              backgroundImage: _pickedImage != null
+                                  ? FileImage(_pickedImage!)
+                                  : null,
+                              child: _pickedImage == null
+                                  ? Icon(
+                                  Icons.person, size: 50.sp, color: Colors.orange)
+                                  : null,
+                            ),
+                            Positioned(
+                              bottom: 0,
+                              right: 0,
+                              child: Container(
+                                padding: EdgeInsets.all(6.w),
+                                decoration: BoxDecoration(
+                                  color: AppTheme.primary,
+                                  shape: BoxShape.circle,
+                                  border: Border.all(
+                                      color: Colors.white, width: 2),
+                                ),
+                                child: Icon(Icons.camera_alt, size: 16.sp,
+                                    color: Colors.white),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+
+                    30.verticalSpace,
+
+                    Text('Full Name', style: AppTextStyle.semiBold(
+                        size: 14.sp, color: Colors.black)),
+                    8.verticalSpace,
+                    TextFormField(
+                      controller: nameController,
+                      textCapitalization: TextCapitalization.words,
+                      validator: (value) {
+                        if (value == null || value
+                            .trim()
+                            .isEmpty) return 'Name is required';
+                        if (value
+                            .trim()
+                            .length < 3)
+                          return 'Name must be at least 3 characters';
+                        return null;
+                      },
+                      style: AppTextStyle.semiBold(
+                          size: 16.sp, color: Colors.black),
+                      decoration: InputDecoration(
+                        hintText: 'Enter your full name',
+                        hintStyle: AppTextStyle.light(
+                            size: 14.sp, color: Colors.grey),
+                        filled: true,
+                        fillColor: Colors.orange.withOpacity(0.06),
+                        contentPadding: EdgeInsets.symmetric(
+                            horizontal: 16.w, vertical: 14.h),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(14.r),
+                          borderSide: BorderSide.none,
+                        ),
+                      ),
+                    ),
+
+                    20.verticalSpace,
+
+                    Text('Address', style: AppTextStyle.semiBold(
+                        size: 14.sp, color: Colors.black)),
+                    8.verticalSpace,
+                    TextFormField(
+                      controller: addressController,
+                      maxLines: 3,
+                      textCapitalization: TextCapitalization.sentences,
+                      validator: (value) {
+                        if (value == null || value
+                            .trim()
+                            .isEmpty) return 'Address is required';
+                        return null;
+                      },
+                      style: AppTextStyle.semiBold(
+                          size: 16.sp, color: Colors.black),
+                      decoration: InputDecoration(
+                        hintText: 'Enter your full address',
+                        hintStyle: AppTextStyle.light(
+                            size: 14.sp, color: Colors.grey),
+                        filled: true,
+                        fillColor: Colors.orange.withOpacity(0.06),
+                        contentPadding: EdgeInsets.symmetric(
+                            horizontal: 16.w, vertical: 14.h),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(14.r),
+                          borderSide: BorderSide.none,
+                        ),
+                      ),
+                    ),
+
+                    20.verticalSpace,
+
+                    Text('Pincode', style: AppTextStyle.semiBold(
+                        size: 14.sp, color: Colors.black)),
+                    8.verticalSpace,
+                    TextFormField(
+                      controller: pincodeController,
+                      keyboardType: TextInputType.number,
+                      inputFormatters: [
+                        FilteringTextInputFormatter.digitsOnly,
+                        LengthLimitingTextInputFormatter(6),
+                      ],
+                      validator: (value) {
+                        if (value == null || value
+                            .trim()
+                            .isEmpty) return 'Pincode is required';
+                        if (value
+                            .trim()
+                            .length != 6) return 'Pincode must be 6 digits';
+                        return null;
+                      },
+                      style: AppTextStyle.semiBold(
+                          size: 16.sp, color: Colors.black),
+                      decoration: InputDecoration(
+                        hintText: 'Enter pincode',
+                        hintStyle: AppTextStyle.light(
+                            size: 14.sp, color: Colors.grey),
+                        filled: true,
+                        fillColor: Colors.orange.withOpacity(0.06),
+                        contentPadding: EdgeInsets.symmetric(
+                            horizontal: 16.w, vertical: 14.h),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(14.r),
+                          borderSide: BorderSide.none,
+                        ),
+                      ),
+                    ),
+
+                    40.verticalSpace,
+
+                    // 👇 Button - scroll content ke andar
+                    PremiumLoadingButton(
+                      isLoading: false,
+                      onTap: _onSubmitTap,
+                    ),
+
+                    70.verticalSpace,
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
