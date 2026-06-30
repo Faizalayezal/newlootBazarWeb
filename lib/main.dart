@@ -6,7 +6,7 @@ import 'package:lootbazarweb/route/app_router.dart';
 import 'package:lootbazarweb/tool/NotSupportedScreen.dart';
 import 'package:lootbazarweb/url_strategy/url_strategy_stub.dart';
 import 'package:responsive_framework/responsive_framework.dart';
-
+import 'package:flutter/services.dart';
 import 'utils/preferences.dart';
 
 
@@ -14,6 +14,9 @@ void main() async  {
   configureUrlStrategy();
   WidgetsFlutterBinding.ensureInitialized();
   await SharedPrefs().init();
+  await SystemChrome.setPreferredOrientations([
+    DeviceOrientation.portraitUp,
+  ]);
   runApp(const ProviderScope(child: MyApp()));
 }
 
