@@ -6,7 +6,6 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lootbazarweb/constant/AppToast.dart';
 import 'package:lootbazarweb/core/theme.dart';
-import 'package:lootbazarweb/providerd/category/CategoryNotifier.dart';
 import 'package:lootbazarweb/providerd/register/RegisterNotifier.dart';
 import 'package:lootbazarweb/providerd/register/register_state.dart';
 import 'package:lootbazarweb/route/AppRoutes.dart';
@@ -89,7 +88,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           padding: EdgeInsets.only(
             left: 24.w,
             right: 24.w,
-            bottom: 170.h,
+            bottom: 80.h,
           ),
           child: PremiumLoadingButton(
             isLoading: registerState.isLoading,
@@ -250,6 +249,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           child: TextFormField(
                             controller: phoneController,
                             keyboardType: TextInputType.number,
+                            textInputAction: TextInputAction.done,
+                            onFieldSubmitted: (_) => _onContinueTap(),
                             autofillHints: const [
                               AutofillHints.telephoneNumber,
                             ],

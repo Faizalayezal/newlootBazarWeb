@@ -9,12 +9,14 @@ import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:lootbazarweb/bottomNav/NavBarController.dart';
 import 'package:lootbazarweb/core/theme.dart';
+import 'package:lootbazarweb/providerd/CityState.dart';
 import 'package:lootbazarweb/providerd/Products/ProductNotifier.dart';
 import 'package:lootbazarweb/providerd/currantUserListning/CurrentProductNotifier.dart';
 import 'package:lootbazarweb/providerd/store_product/StoreProductNotifier.dart';
 import 'package:lootbazarweb/providerd/store_product/store_product_state.dart';
 import 'package:lootbazarweb/route/AppRoutes.dart';
 import 'package:lootbazarweb/shared/AppTextStyle.dart';
+import 'package:lootbazarweb/shared/CityPickerSheet.dart';
 import 'package:lootbazarweb/shared/ListingSuccessDialog.dart';
 import 'package:lootbazarweb/shared/PremiumLoadingButton.dart';
 import 'package:lootbazarweb/shared/apply_buttons.dart';
@@ -48,7 +50,6 @@ class _SellScreenState extends ConsumerState<SellScreen> {
   final ValueNotifier<bool> _isChecked = ValueNotifier<bool>(false);
   final ValueNotifier<bool> _isDropdownOpen = ValueNotifier(false);
 
-  // ✅ Categories ValueNotifier — SharedPrefs se populate hoga
   final ValueNotifier<List<Map<String, dynamic>>> dataString = ValueNotifier(
     [],
   );
@@ -66,6 +67,8 @@ class _SellScreenState extends ConsumerState<SellScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadCategoriesFromPrefs();
       ref.read(currentProductProvider.notifier).getCurrentUserProducts();
+      _cityController.text = SharedPrefs().getString(address) ?? '';
+      _phoneController.text = SharedPrefs().getString(phoneNumber) ?? '';
     });
   }
 
@@ -129,6 +132,33 @@ class _SellScreenState extends ConsumerState<SellScreen> {
         .map((e) => e['id'].toString())
         .toList();
   }
+
+  Future<void> _openCityPicker() async {
+    // ✅ Close any open keyboard BEFORE opening the sheet
+    FocusManager.instance.primaryFocus?.unfocus();
+
+    final cityState = ref.read(cityProvider);
+    if (cityState.cities.isEmpty && !cityState.isLoading) {
+      ref.read(cityProvider.notifier).loadCities();
+    }
+
+    final selected = await showModalBottomSheet<String>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => const CityPickerSheet(),
+    );
+
+    // ✅ Ensure nothing grabs focus after the sheet closes
+    FocusManager.instance.primaryFocus?.unfocus();
+
+    if (!mounted) return;
+
+    if (selected != null && selected.isNotEmpty) {
+      setState(() => _cityController.text = selected);
+    }
+  }
+
 
   @override
   void dispose() {
@@ -256,9 +286,7 @@ class _SellScreenState extends ConsumerState<SellScreen> {
                               onTap: () {
                                 context.pushNamed(
                                   AppRoutes.productDetail,
-                                  extra: {
-                                    'productId': product.id,
-                                  },
+                                  extra: {'productId': product.id},
                                 );
                                 // navigate to product detail
                               },
@@ -292,31 +320,39 @@ class _SellScreenState extends ConsumerState<SellScreen> {
                             borderRadius: BorderRadius.circular(14.r),
                           ),
                           child: Padding(
-                            padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 16.h),
+                            padding: EdgeInsets.symmetric(
+                              horizontal: 14.w,
+                              vertical: 16.h,
+                            ),
                             child: Form(
                               key: mFormKey,
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-
                                   // Category Dropdown
                                   ValueListenableBuilder<bool>(
                                     valueListenable: _isDropdownOpen,
                                     builder: (context, isOpen, child) {
                                       return Column(
-                                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.stretch,
                                         children: [
                                           GestureDetector(
                                             onTap: () {
-                                              _isDropdownOpen.value = !_isDropdownOpen.value;
+                                              _isDropdownOpen.value =
+                                                  !_isDropdownOpen.value;
                                             },
                                             child: AbsorbPointer(
                                               child: TextFormField(
                                                 controller: _categoryController,
                                                 readOnly: true,
-                                                style: TextStyle(fontSize: 14.sp, color: Colors.black),
+                                                style: TextStyle(
+                                                  fontSize: 14.sp,
+                                                  color: Colors.black,
+                                                ),
                                                 validator: (value) {
-                                                  if (value == null || value.isEmpty) {
+                                                  if (value == null ||
+                                                      value.isEmpty) {
                                                     return 'Select category!';
                                                   }
                                                   return null;
@@ -325,8 +361,10 @@ class _SellScreenState extends ConsumerState<SellScreen> {
                                                   hintText: 'Select Category',
                                                   suffixIcon: Icon(
                                                     isOpen
-                                                        ? Icons.keyboard_arrow_up_rounded
-                                                        : Icons.keyboard_arrow_down_rounded,
+                                                        ? Icons
+                                                              .keyboard_arrow_up_rounded
+                                                        : Icons
+                                                              .keyboard_arrow_down_rounded,
                                                     color: Colors.black54,
                                                     size: 24.sp,
                                                   ),
@@ -340,46 +378,80 @@ class _SellScreenState extends ConsumerState<SellScreen> {
                                               margin: EdgeInsets.only(top: 6.h),
                                               height: 200.h,
                                               decoration: BoxDecoration(
-                                                  color: Colors.white,
-                                                  borderRadius: BorderRadius.circular(10.r),
-                                                  border: Border.all(color: Colors.grey.shade300),
-                                                  boxShadow: [
-                                                    BoxShadow(
-                                                      color: Colors.black12,
-                                                      blurRadius: 4,
-                                                      offset: const Offset(0, 2),
-                                                    )
-                                                  ]
+                                                color: Colors.white,
+                                                borderRadius:
+                                                    BorderRadius.circular(10.r),
+                                                border: Border.all(
+                                                  color: Colors.grey.shade300,
+                                                ),
+                                                boxShadow: [
+                                                  BoxShadow(
+                                                    color: Colors.black12,
+                                                    blurRadius: 4,
+                                                    offset: const Offset(0, 2),
+                                                  ),
+                                                ],
                                               ),
-                                              child: ValueListenableBuilder<List<Map<String, dynamic>>>(
-                                                valueListenable: dataString,
-                                                builder: (context, list, child) {
-                                                  return ListView.separated(
-                                                    padding: EdgeInsets.zero,
-                                                    shrinkWrap: true,
-                                                    itemCount: list.length,
-                                                    separatorBuilder: (context, idx) => Divider(height: 1, color: Colors.grey.shade100),
-                                                    itemBuilder: (context, i) {
-                                                      final isSelected = list[i]['selected'] as bool;
-                                                      return ListTile(
-                                                        dense: true,
-                                                        title: Text(
-                                                          list[i]['name'] ?? '',
-                                                          style: TextStyle(
-                                                            fontSize: 13.5.sp,
-                                                            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                                                            color: isSelected ? AppTheme.primary : Colors.black87,
-                                                          ),
-                                                        ),
-                                                        trailing: isSelected
-                                                            ? const Icon(Icons.check_circle, color: AppTheme.primary)
-                                                            : null,
-                                                        onTap: () => _selectItem(i),
+                                              child:
+                                                  ValueListenableBuilder<
+                                                    List<Map<String, dynamic>>
+                                                  >(
+                                                    valueListenable: dataString,
+                                                    builder: (context, list, child) {
+                                                      return ListView.separated(
+                                                        padding:
+                                                            EdgeInsets.zero,
+                                                        shrinkWrap: true,
+                                                        itemCount: list.length,
+                                                        separatorBuilder:
+                                                            (context, idx) =>
+                                                                Divider(
+                                                                  height: 1,
+                                                                  color: Colors
+                                                                      .grey
+                                                                      .shade100,
+                                                                ),
+                                                        itemBuilder: (context, i) {
+                                                          final isSelected =
+                                                              list[i]['selected']
+                                                                  as bool;
+                                                          return ListTile(
+                                                            dense: true,
+                                                            title: Text(
+                                                              list[i]['name'] ??
+                                                                  '',
+                                                              style: TextStyle(
+                                                                fontSize:
+                                                                    13.5.sp,
+                                                                fontWeight:
+                                                                    isSelected
+                                                                    ? FontWeight
+                                                                          .bold
+                                                                    : FontWeight
+                                                                          .normal,
+                                                                color:
+                                                                    isSelected
+                                                                    ? AppTheme
+                                                                          .primary
+                                                                    : Colors
+                                                                          .black87,
+                                                              ),
+                                                            ),
+                                                            trailing: isSelected
+                                                                ? const Icon(
+                                                                    Icons
+                                                                        .check_circle,
+                                                                    color: AppTheme
+                                                                        .primary,
+                                                                  )
+                                                                : null,
+                                                            onTap: () =>
+                                                                _selectItem(i),
+                                                          );
+                                                        },
                                                       );
                                                     },
-                                                  );
-                                                },
-                                              ),
+                                                  ),
                                             ),
                                         ],
                                       );
@@ -391,14 +463,20 @@ class _SellScreenState extends ConsumerState<SellScreen> {
                                   // Product Title textfield
                                   TextFormField(
                                     controller: _titleController,
-                                    style: TextStyle(fontSize: 14.sp, color: Colors.black),
+                                    style: TextStyle(
+                                      fontSize: 14.sp,
+                                      color: Colors.black,
+                                    ),
                                     validator: (value) {
-                                      if (value == null || value.trim().isEmpty) {
+                                      if (value == null ||
+                                          value.trim().isEmpty) {
                                         return 'Enter product title';
                                       }
                                       return null;
                                     },
-                                    decoration: _inputDecoration(hintText: 'Product Title'),
+                                    decoration: _inputDecoration(
+                                      hintText: 'Product Title',
+                                    ),
                                   ),
 
                                   SizedBox(height: 12.h),
@@ -407,8 +485,13 @@ class _SellScreenState extends ConsumerState<SellScreen> {
                                   TextFormField(
                                     controller: _descriptionController,
                                     maxLines: 3,
-                                    style: TextStyle(fontSize: 14.sp, color: Colors.black),
-                                    decoration: _inputDecoration(hintText: 'Description'),
+                                    style: TextStyle(
+                                      fontSize: 14.sp,
+                                      color: Colors.black,
+                                    ),
+                                    decoration: _inputDecoration(
+                                      hintText: 'Description',
+                                    ),
                                   ),
 
                                   SizedBox(height: 12.h),
@@ -420,13 +503,19 @@ class _SellScreenState extends ConsumerState<SellScreen> {
                                         child: TextFormField(
                                           controller: _pcsController,
                                           keyboardType: TextInputType.number,
-                                          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                                          inputFormatters: [
+                                            FilteringTextInputFormatter
+                                                .digitsOnly,
+                                          ],
                                           style: TextStyle(fontSize: 14.sp),
                                           validator: (value) {
-                                            if (value == null || value.isEmpty) return 'Enter quantity';
+                                            if (value == null || value.isEmpty)
+                                              return 'Enter quantity';
                                             return null;
                                           },
-                                          decoration: _inputDecoration(hintText: 'Total Quantity'),
+                                          decoration: _inputDecoration(
+                                            hintText: 'Total Quantity',
+                                          ),
                                         ),
                                       ),
                                       SizedBox(width: 10.w),
@@ -434,13 +523,33 @@ class _SellScreenState extends ConsumerState<SellScreen> {
                                         child: TextFormField(
                                           controller: _moqController,
                                           keyboardType: TextInputType.number,
-                                          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                                          inputFormatters: [
+                                            FilteringTextInputFormatter
+                                                .digitsOnly,
+                                          ],
                                           style: TextStyle(fontSize: 14.sp),
                                           validator: (value) {
-                                            if (value == null || value.isEmpty) return 'Enter MOQ';
+                                            if (value == null ||
+                                                value.isEmpty) {
+                                              return 'Enter MOQ';
+                                            }
+                                            final int moq =
+                                                int.tryParse(value) ?? 0;
+                                            final int totalQty =
+                                                int.tryParse(
+                                                  _pcsController.text,
+                                                ) ??
+                                                0;
+
+                                            if (moq > totalQty) {
+                                              return 'MOQ cannot be greater than Total Quantity';
+                                            }
+
                                             return null;
                                           },
-                                          decoration: _inputDecoration(hintText: 'MOQ'),
+                                          decoration: _inputDecoration(
+                                            hintText: 'MOQ',
+                                          ),
                                         ),
                                       ),
                                     ],
@@ -452,14 +561,26 @@ class _SellScreenState extends ConsumerState<SellScreen> {
                                   Row(
                                     children: [
                                       Expanded(
-                                        child: TextFormField(
-                                          controller: _cityController,
-                                          style: TextStyle(fontSize: 14.sp),
-                                          validator: (value) {
-                                            if (value == null || value.trim().isEmpty) return 'Enter city';
-                                            return null;
-                                          },
-                                          decoration: _inputDecoration(hintText: 'Location (city)'),
+                                        child: GestureDetector(
+                                          onTap: _openCityPicker,
+                                          child: AbsorbPointer(
+                                            child: TextFormField(
+                                              focusNode: FocusNode(
+                                                canRequestFocus: false,
+                                              ),
+                                              controller: _cityController,
+                                              style: TextStyle(fontSize: 14.sp),
+                                              validator: (value) {
+                                                if (value == null ||
+                                                    value.trim().isEmpty)
+                                                  return 'Enter city';
+                                                return null;
+                                              },
+                                              decoration: _inputDecoration(
+                                                hintText: 'Location (city)',
+                                              ),
+                                            ),
+                                          ),
                                         ),
                                       ),
                                       SizedBox(width: 10.w),
@@ -467,13 +588,19 @@ class _SellScreenState extends ConsumerState<SellScreen> {
                                         child: TextFormField(
                                           controller: _priceController,
                                           keyboardType: TextInputType.number,
-                                          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                                          inputFormatters: [
+                                            FilteringTextInputFormatter
+                                                .digitsOnly,
+                                          ],
                                           style: TextStyle(fontSize: 14.sp),
                                           validator: (value) {
-                                            if (value == null || value.isEmpty) return 'Enter price';
+                                            if (value == null || value.isEmpty)
+                                              return 'Enter price';
                                             return null;
                                           },
-                                          decoration: _inputDecoration(hintText: 'Price per PCS'),
+                                          decoration: _inputDecoration(
+                                            hintText: 'Price per PCS',
+                                          ),
                                         ),
                                       ),
                                     ],
@@ -486,10 +613,15 @@ class _SellScreenState extends ConsumerState<SellScreen> {
                                     controller: _phoneController,
                                     keyboardType: TextInputType.phone,
                                     maxLength: 10,
-                                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                                    style: TextStyle(fontSize: 14.sp, fontWeight: FontWeight.w500),
+                                    inputFormatters: [
+                                      FilteringTextInputFormatter.digitsOnly,
+                                    ],
+                                    style: TextStyle(
+                                      fontSize: 14.sp,
+                                      fontWeight: FontWeight.w500,
+                                    ),
                                     validator: (value) {
-                                      if (value == null || value.length != 10) {
+                                      if (value == null || value.length < 12) {
                                         return 'Enter valid 10-digit mobile';
                                       }
                                       return null;
@@ -506,22 +638,30 @@ class _SellScreenState extends ConsumerState<SellScreen> {
                                     onTap: _pickImages,
                                     child: Container(
                                       width: double.infinity,
-                                      padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 14.h),
+                                      padding: EdgeInsets.symmetric(
+                                        horizontal: 16.w,
+                                        vertical: 14.h,
+                                      ),
                                       decoration: BoxDecoration(
                                         color: Color(0xFFF8E7BE),
-                                        borderRadius: BorderRadius.circular(12.r),
+                                        borderRadius: BorderRadius.circular(
+                                          12.r,
+                                        ),
                                       ),
                                       child: Row(
                                         children: [
                                           Column(
-                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
                                             children: [
                                               Text(
                                                 "Upload Product photos",
                                                 style: TextStyle(
                                                   fontSize: 14.sp,
                                                   fontWeight: FontWeight.bold,
-                                                  color: const Color(0xFF1E1E1E),
+                                                  color: const Color(
+                                                    0xFF1E1E1E,
+                                                  ),
                                                 ),
                                               ),
                                               SizedBox(height: 3.h),
@@ -552,8 +692,11 @@ class _SellScreenState extends ConsumerState<SellScreen> {
                                   PremiumLoadingButton(
                                     isLoading: false,
                                     onTap: () async {
-                                      FocusManager.instance.primaryFocus?.unfocus();
-                                      await Future.delayed(const Duration(milliseconds: 100));
+                                      FocusManager.instance.primaryFocus
+                                          ?.unfocus();
+                                      await Future.delayed(
+                                        const Duration(milliseconds: 100),
+                                      );
                                       // setProductData();
                                       if (mFormKey.currentState!.validate()) {
                                         if (imagePaths.isNotEmpty) {
@@ -632,17 +775,17 @@ class _SellScreenState extends ConsumerState<SellScreen> {
           location: _cityController.text.trim(),
           imagePaths: imagePaths,
         );
-
   }
-  InputDecoration _inputDecoration({required String hintText, Widget? suffixIcon}) {
+
+  InputDecoration _inputDecoration({
+    required String hintText,
+    Widget? suffixIcon,
+  }) {
     return InputDecoration(
       filled: true,
       fillColor: Colors.white,
       hintText: hintText,
-      hintStyle: TextStyle(
-        color: Colors.grey.shade400,
-        fontSize: 13.5.sp,
-      ),
+      hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 13.5.sp),
       suffixIcon: suffixIcon,
       isDense: true,
       contentPadding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 12.h),
@@ -665,11 +808,10 @@ class _SellScreenState extends ConsumerState<SellScreen> {
     );
   }
 
-
   Future<void> _openBottomSheet() async {
     return showModalBottomSheet(
       showDragHandle: true,
-      backgroundColor: Colors.white,
+      backgroundColor: AppTheme.card,
       isScrollControlled: true,
       constraints: BoxConstraints(
         maxHeight: MediaQuery.of(context).size.height * 0.8,

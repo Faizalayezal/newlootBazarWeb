@@ -88,7 +88,7 @@ class RegisterNotifier extends StateNotifier<RegisterState> {
     try {
       final isProfileCompleted =
           await (_prefs.getString(userId)?.isNotEmpty ?? false) &&
-          (_prefs.getString(profileImage)?.isNotEmpty ?? false) &&
+          //(_prefs.getString(profileImage)?.isNotEmpty ?? false) &&
           (_prefs.getString(address)?.isNotEmpty ?? false) &&
           (_prefs.getString(name)?.isNotEmpty ?? false) &&
           (_prefs.getString(pincode)?.isNotEmpty ?? false) &&

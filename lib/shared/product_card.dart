@@ -176,83 +176,79 @@ class ProductCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
-      child: Container(
-        // Rounded card decoration with outer peach-yellow background matching the screenshot
-        decoration: BoxDecoration(
-          color: const Color(0xFFFFF0C4), // Perfect high-fidelity yellow-peach color matches screenshot
-          borderRadius: BorderRadius.circular(10.r),
-        ),
-        child: Column(
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(10.r),
+        child: Stack(
           children: [
             // ─── 1. Top Image Section with Crop Rounding ───
-            Expanded(
-              child: ClipRRect(
-                borderRadius: BorderRadius.only(
-                  topLeft: Radius.circular(10.r),
-                  topRight: Radius.circular(10.r),
-                ),
-                child: imageUrl != null && imageUrl!.startsWith('http')
-                    ? CachedNetworkImage(
-                  imageUrl: imageUrl??'',
-                  fit: BoxFit.cover,
-                  width: double.infinity,
-                  height: double.infinity,
-                  placeholder: (context, url) => Container(
-                    color: const Color(0xFFFFE6DC),
-                    child: const Center(
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFFF5722)),
-                      ),
-                    ),
-                  ),
-                  errorWidget: (context, url, error) => _buildPlaceholderImage(),
-                )
-                    : _buildPlaceholderImage(),
-              ),
-            ),
-
-            // ─── 2. Bottom Beautiful White Panel nested with Border Contour ───
-            Padding(
-              padding: EdgeInsets.only(top:10.h,bottom: 2.h,right: 2.w,left: 2.w), // Creates the perfect nested border contour shown in the screenshot
-              child: Container(
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(10.r), // Standard nested corner multiplier
-                ),
-                padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 2.h),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Dynamic double-line Title
-                    SizedBox(
-                      height: 38.h, // Constrained height prevents layout shifts or vertical breaks
-                      child: Text(
-                        title ?? '',
-                        overflow: TextOverflow.ellipsis,
-                        maxLines: 2,
-                        style: TextStyle(
-                          fontSize: 12.sp,
-                          color: Colors.black,
-                          fontWeight: FontWeight.w400,
-                          height: 1.25,
+            Positioned.fill(
+              child: imageUrl != null && imageUrl!.startsWith('http')
+                  ? CachedNetworkImage(
+                      imageUrl: imageUrl ?? '',
+                      fit: BoxFit.cover,
+                      placeholder: (context, url) => Container(
+                        color: const Color(0xFFFFE6DC),
+                        child: const Center(
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              Color(0xFFFF5722),
+                            ),
+                          ),
                         ),
                       ),
-                    ),
-
-                    SizedBox(height: 8.h),
-
-                    // Unified dynamic sizing stats Row
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        _buildStatColumn('₹${rate ?? "0"}', 'Rate'),
-                        _buildStatColumn(pcs ?? "0", 'Quantity'), // Matched to 'Quantity' as shown in screenshot
-                        _buildStatColumn(moq ?? "0", 'MOQ'),
-                        _buildStatColumn(location ?? "-", 'Location'),
-                      ],
-                    ),
-                  ],
+                      errorWidget: (context, url, error) =>
+                          _buildPlaceholderImage(),
+                    )
+                  : _buildPlaceholderImage(),
+            ),
+        
+            // ─── 2. Bottom Beautiful White Panel nested with Border Contour ───
+            Positioned(
+              left: 2.w,
+              right: 2.w,
+              bottom: 2.h,
+              child: Material(
+                elevation: 4,
+                borderRadius: BorderRadius.circular(10.r),
+                color: Colors.white,
+                child: Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 8.h),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Dynamic double-line Title
+                      SizedBox(
+                        height: 38.h,
+                        // Constrained height prevents layout shifts or vertical breaks
+                        child: Text(
+                          title ?? '',
+                          overflow: TextOverflow.ellipsis,
+                          maxLines: 2,
+                          style: TextStyle(
+                            fontSize: 12.sp,
+                            color: Colors.black,
+                            fontWeight: FontWeight.w400,
+                            height: 1.25,
+                          ),
+                        ),
+                      ),
+        
+                      SizedBox(height: 8.h),
+        
+                      // Unified dynamic sizing stats Row
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          _buildStatColumn('₹${rate ?? "0"}', 'Rate'),
+                          _buildStatColumn(pcs ?? "0", 'Quantity'),
+                          // Matched to 'Quantity' as shown in screenshot
+                          _buildStatColumn(moq ?? "0", 'MOQ'),
+                          _buildStatColumn(location ?? "-", 'Location'),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),

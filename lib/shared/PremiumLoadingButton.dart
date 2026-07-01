@@ -4,7 +4,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:lootbazarweb/core/theme.dart';
 import 'package:lootbazarweb/shared/AppTextStyle.dart';
 
-class PremiumLoadingButton extends StatefulWidget {
+class PremiumLoadingButton extends StatelessWidget {
   final bool isLoading;
   final VoidCallback? onTap;
   final String label;
@@ -19,150 +19,87 @@ class PremiumLoadingButton extends StatefulWidget {
   });
 
   @override
-  State<PremiumLoadingButton> createState() => _PremiumLoadingButtonState();
-}
-
-class _PremiumLoadingButtonState extends State<PremiumLoadingButton>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-  late Animation<double> _fillAnimation;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1800),
-    );
-    _fillAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
-    );
-  }
-
-  @override
-  void didUpdateWidget(PremiumLoadingButton oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (widget.isLoading && !oldWidget.isLoading) {
-      // Loading shuru — fill loop start karo
-      _controller.repeat();
-    } else if (!widget.isLoading && oldWidget.isLoading) {
-      // Loading khatam — reset
-      _controller.stop();
-      _controller.reset();
-    }
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: widget.isLoading ? null : widget.onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 300),
-        height: 54.h,
-        decoration: BoxDecoration(
-          color: widget.isLoading ? Colors.transparent : AppTheme.primary,
-          borderRadius: BorderRadius.circular(50.r),
-          border: widget.isLoading
-              ? Border.all(color: AppTheme.primary, width: 1.5)
-              : null,
-        ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(50.r),
-          child: Stack(
-            children: [
-              // ── Shimmer fill layer (loading me) ──
-              if (widget.isLoading)
-                AnimatedBuilder(
-                  animation: _fillAnimation,
-                  builder: (context, _) {
-                    return Align(
-                      alignment: Alignment.centerLeft,
-                      child: FractionallySizedBox(
-                        widthFactor: _fillAnimation.value,
-                        child: Container(
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              colors: [
-                                AppTheme.primary.withValues(alpha: 0.3),
-                                AppTheme.primary.withValues(alpha: 0.85),
-                              ],
-                            ),
-                          ),
+    return SizedBox(
+      width: double.infinity,
+      height: 54.h,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final double fullWidth = constraints.maxWidth;
+          final double collapsedSize = 54.h;
+
+          return GestureDetector(
+            onTap: isLoading ? null : onTap,
+            child: Align(
+              alignment: Alignment.center,
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 380),
+                curve: Curves.easeOutCubic,
+                width: isLoading ? collapsedSize : fullWidth,
+                height: 54.h,
+                decoration: BoxDecoration(
+                  color: AppTheme.primary,
+                  borderRadius: BorderRadius.circular(50.r),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppTheme.primary.withValues(
+                        alpha: isLoading ? 0.35 : 0.18,
+                      ),
+                      blurRadius: isLoading ? 14 : 10,
+                      spreadRadius: isLoading ? 0.5 : 0,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 200),
+                  switchInCurve: Curves.easeOut,
+                  switchOutCurve: Curves.easeIn,
+                  transitionBuilder: (child, animation) => FadeTransition(
+                    opacity: animation,
+                    child: ScaleTransition(scale: animation, child: child),
+                  ),
+                  child: isLoading
+                      ? Center(
+                    key: const ValueKey('spinner'),
+                    child: SizedBox(
+                      width: 22.w,
+                      height: 22.h,
+                      child: const CircularProgressIndicator(
+                        strokeWidth: 2.4,
+                        valueColor: AlwaysStoppedAnimation<Color>(
+                          Colors.white,
                         ),
                       ),
-                    );
-                  },
-                ),
-
-              // ── Content ──
-              SizedBox(
-                height: 54.h,
-                child: Padding(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: 20.w,
-                    vertical: 5.h,
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      AnimatedSwitcher(
-                        duration: const Duration(milliseconds: 250),
-                        child: widget.isLoading
-                            ? Text(
-                          'Please wait...',
-                          key: const ValueKey('loading'),
-                          style: AppTextStyle.semiBold(
-                            size: 16.sp,
-                            color: AppTheme.primary,
-                          ),
-                        )
-                            : Text(
-                          widget.label,
-                          key: const ValueKey('label'),
+                    ),
+                  )
+                      : Padding(
+                    key: const ValueKey('content'),
+                    padding: EdgeInsets.symmetric(horizontal: 20.w),
+                    child: Row(
+                      mainAxisAlignment:
+                      MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          label,
                           style: AppTextStyle.semiBold(
                             size: 16.sp,
                             color: Colors.white,
                           ),
                         ),
-                      ),
-
-                      // Arrow ya spinner
-                      AnimatedSwitcher(
-                        duration: const Duration(milliseconds: 300),
-                        transitionBuilder: (child, anim) => ScaleTransition(
-                          scale: anim,
-                          child: child,
+                        SvgPicture.asset(
+                          iconAsset,
+                          width: 28.w,
+                          height: 28.h,
                         ),
-                        child: widget.isLoading
-                            ? SizedBox(
-                          key: const ValueKey('spinner'),
-                          width: 26.w,
-                          height: 26.h,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2.5,
-                            color: AppTheme.primary,
-                          ),
-                        )
-                            : SvgPicture.asset(
-                          widget.iconAsset,
-                          key: const ValueKey('arrow'),
-                          width: 32.w,
-                          height: 32.h,
-                        ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ),
-            ],
-          ),
-        ),
+            ),
+          );
+        },
       ),
     );
   }

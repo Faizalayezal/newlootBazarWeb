@@ -18,4 +18,8 @@ class ApiConstants {
   static const String uploadImage = '/frontend/products/upload-image';
   static const String getNotification = '/frontend/notifications';
 
+  // ---------- Countries/Cities API (different base) ----------
+  static const String citiesBaseUrl = 'https://countriesnow.space/api/v0.1';
+  static const String citiesPopulation = '$citiesBaseUrl/countries/population/cities';
+
 }

@@ -7,12 +7,15 @@ import 'package:lootbazarweb/tool/NotSupportedScreen.dart';
 import 'package:lootbazarweb/url_strategy/url_strategy_stub.dart';
 import 'package:responsive_framework/responsive_framework.dart';
 import 'package:flutter/services.dart';
+import 'constant/AppToast.dart';
 import 'utils/preferences.dart';
 
 
 void main() async  {
   configureUrlStrategy();
   WidgetsFlutterBinding.ensureInitialized();
+  AppToast.navigatorKey = rootNavigatorKey;
+
   await SharedPrefs().init();
   await SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,

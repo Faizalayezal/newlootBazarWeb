@@ -6,6 +6,8 @@ import 'package:lootbazarweb/providerd/Products/ProductModel.dart';
 import 'package:lootbazarweb/providerd/Products/ProductState.dart';
 import 'package:lootbazarweb/providerd/video/VideoListResponse.dart';
 import 'package:lootbazarweb/route/AppRoutes.dart';
+import 'package:lootbazarweb/screens/StoryScreen.dart';
+import 'package:lootbazarweb/utils/preferences_key.dart';
 
 class StoryCard extends StatelessWidget {
   final VideoItem video;
@@ -22,33 +24,33 @@ class StoryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final userName = video.user?.name ?? '';
-    final profileImage = video.user?.profileImage ?? '';
+    final dynamic user = video.user ?? video.user?.id??'';
+    final dynamic product = video.product ?? video.id;
+    final String sellerName = user?.name ?? 'Seller';
+
     final productThumb = video.product?.imageUrls.isNotEmpty == true
         ? video.product!.imageUrls.first
         : null;
+    final String profileImage = user?.profileImage ?? '';
 
     return GestureDetector(
       onTap: () {
         context.pushNamed(
-          AppRoutes.storyScreen,
-          extra: {
-            'videos': allVideos,
-            'initialIndex': initialIndex,
-            'productModel': productModel,
-          },
-        );
+            AppRoutes.storyScreen,
+            extra: {
+              'videos': allVideos,
+              'initialIndex': initialIndex,
+              'productModel': productModel,
+            },);
       },
       child: SizedBox(
-        width: 72.w,
+        width: 76.w,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // ── Circular avatar with orange ring + video thumbnail overlay ──
             Stack(
               alignment: Alignment.center,
               children: [
-                // Orange ring
                 Container(
                   width: 72.w,
                   height: 72.w,
@@ -60,11 +62,10 @@ class StoryCard extends StatelessWidget {
                     ),
                   ),
                 ),
-                // Avatar / product thumbnail
                 ClipOval(
                   child: SizedBox(
-                    width: 65.w,
-                    height: 65.w,
+                    width: 64.w,
+                    height: 64.w,
                     child: productThumb != null
                         ? CachedNetworkImage(
                       imageUrl: productThumb,
@@ -78,12 +79,11 @@ class StoryCard extends StatelessWidget {
                         : _profileFallback(profileImage),
                   ),
                 ),
-                // Play icon overlay
                 Container(
-                  width: 22.w,
-                  height: 22.w,
+                  width: 20.w,
+                  height: 20.w,
                   decoration: BoxDecoration(
-                    color: Colors.black.withOpacity(0.45),
+                    color: Colors.black.withOpacity(0.4),
                     shape: BoxShape.circle,
                   ),
                   child: Icon(
@@ -94,17 +94,16 @@ class StoryCard extends StatelessWidget {
                 ),
               ],
             ),
-            SizedBox(height: 5.h),
-            // User name
+            SizedBox(height: 6.h),
             Text(
-              userName.isEmpty ? 'Video' : userName,
+              product?.title ?? sellerName,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 10.sp,
                 fontWeight: FontWeight.w600,
-                color: const Color(0xFF1A1A1A),
+                color: const Color(0xFF111111),
               ),
             ),
           ],
@@ -118,8 +117,7 @@ class StoryCard extends StatelessWidget {
       return CachedNetworkImage(
         imageUrl: imageUrl,
         fit: BoxFit.cover,
-        placeholder: (_, __) =>
-            Container(color: const Color(0xFFFFE6DC)),
+        placeholder: (_, __) => Container(color: const Color(0xFFFFE6DC)),
         errorWidget: (_, __, ___) => Container(
           color: const Color(0xFFFFE6DC),
           child: const Icon(Icons.person, color: Colors.white),

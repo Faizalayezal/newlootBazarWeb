@@ -109,6 +109,15 @@ class _ShopScreenState extends ConsumerState<ShopScreen> {
                   ),
                 ),
               ),
+              SliverPadding(
+                padding: EdgeInsets.only(bottom: 80.h, right: 40.w),
+                sliver: SliverToBoxAdapter(
+                  child: Visibility(
+                    visible: productState.products.isNotEmpty,
+                    child: Image.asset('assets/madelogo.png'),
+                  ),
+                ),
+              ),
             ],
           ),
         ),

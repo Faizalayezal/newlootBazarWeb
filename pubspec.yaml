@@ -64,7 +64,7 @@ dependencies:
 
   fluttertoast:
 
-  story_view:
+  flutter_story_presenter: 1.0.7
 
 
 

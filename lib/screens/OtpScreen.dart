@@ -114,6 +114,17 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
     ),
   );
 
+  Future<void> _onSubmitOtp() async {
+    if (!formKey.currentState!.validate()) return;
+    FocusScope.of(context).unfocus();
+    final mobileNo = "${widget.countryCode}${widget.phone}";
+
+    await ref.read(otpProvider.notifier).verifyOtp(
+      mobileNo: mobileNo,
+      otp: otpController.text.trim(),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     ref.listen<OtpState>(otpProvider, (previous, next) {
@@ -138,25 +149,14 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
       bottomSheet: Container(
         color: AppTheme.background,
         child: Padding(
-          padding: EdgeInsets.only(left: 24.w, right: 24.w, bottom: 120.h),
+          padding: EdgeInsets.only(left: 24.w, right: 24.w, bottom: 80.h),
           child: Consumer(
             builder: (context, ref, child) {
               final otpState = ref.watch(otpProvider);
               return PremiumLoadingButton(
                 isLoading: otpState.isLoading,
                 onTap: () async {
-                  if (!formKey.currentState!.validate()) return;
-                  FocusScope.of(context).unfocus();
-                  final mobileNo = "${widget.countryCode}${widget.phone}";
-                  // .replaceAll('+', '')
-                  // .replaceAll(' ', '');
-
-                  await ref
-                      .read(otpProvider.notifier)
-                      .verifyOtp(
-                        mobileNo: mobileNo,
-                        otp: otpController.text.trim(),
-                      );
+                  _onSubmitOtp();
                 },
               );
             },
@@ -356,6 +356,7 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
           if (Platform.isIOS) {
             ScaffoldMessenger.of(context).clearSnackBars();
           }
+          _onSubmitOtp();
         },
         onTap: () {
           if (Platform.isIOS) {

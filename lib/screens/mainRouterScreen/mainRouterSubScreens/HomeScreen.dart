@@ -1,6 +1,4 @@
 import 'dart:math';
-import 'dart:math' as math;
-
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
@@ -13,11 +11,9 @@ import 'package:lootbazarweb/providerd/Products/ProductNotifier.dart';
 import 'package:lootbazarweb/providerd/Products/ProductState.dart';
 import 'package:lootbazarweb/providerd/category/CategoryNotifier.dart';
 import 'package:lootbazarweb/providerd/video/VideoNotifier.dart';
-import 'package:lootbazarweb/response/CategoryModel.dart';
 import 'package:lootbazarweb/route/AppRoutes.dart';
 import 'package:lootbazarweb/shared/AnimatedCategoryCard.dart';
 import 'package:lootbazarweb/shared/AppTextStyle.dart';
-import 'package:lootbazarweb/shared/StatusCardWIdget.dart';
 import 'package:lootbazarweb/shared/StoryCard.dart';
 import 'package:lootbazarweb/shared/product_card.dart';
 import 'package:lootbazarweb/tool/ProductShimmerCard.dart';
@@ -265,7 +261,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                         itemBuilder: (context, index) {
                           final video = videoState.videos[index];
                           return StoryCard(
-                            productModel:video.product!,
+                            productModel: video.product!,
                             video: video,
                             allVideos: videoState.videos,
                             initialIndex: index,
@@ -289,6 +285,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               SliverPadding(
                 padding: EdgeInsets.symmetric(horizontal: 12.w),
                 sliver: SliverToBoxAdapter(child: _buildContent(productState)),
+              ),
+
+              SliverPadding(
+                padding: EdgeInsets.only(bottom: 80.h, right: 40.w),
+                sliver: SliverToBoxAdapter(
+                  child: Visibility(
+                    visible: productState.products.isNotEmpty,
+                    child: Image.asset('assets/madelogo.png'),
+                  ),
+                ),
               ),
             ],
           ),
@@ -419,9 +425,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           onTap: () {
             context.pushNamed(
               AppRoutes.productDetail,
-              extra: {
-                'productId': product.id,
-              },
+              extra: {'productId': product.id},
             );
           },
         );
@@ -546,7 +550,6 @@ class _OrangeHeaderDelegate extends SliverPersistentHeaderDelegate {
   bool shouldRebuild(covariant _OrangeHeaderDelegate old) =>
       old.topPad != topPad;
 }
-
 
 class _SearchBar extends StatelessWidget {
   const _SearchBar();

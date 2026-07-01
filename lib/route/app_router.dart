@@ -19,9 +19,9 @@ import 'package:lootbazarweb/screens/mainRouterScreen/mainRouterSubScreens/SellS
 import 'package:lootbazarweb/screens/mainRouterScreen/mainRouterSubScreens/ShopScreen.dart';
 import 'package:lootbazarweb/screens/mainRouterScreen/myListingScreen.dart';
 
-final _rootNavigatorKey = GlobalKey<NavigatorState>();
+final rootNavigatorKey = GlobalKey<NavigatorState>();
 final appRouter = GoRouter(
-  navigatorKey: _rootNavigatorKey,
+  navigatorKey: rootNavigatorKey,
   initialLocation: '/splash',
   routes: [
     GoRoute(
@@ -57,7 +57,7 @@ final appRouter = GoRouter(
     GoRoute(
       path: '/setup-profile',
       name: AppRoutes.setupProfileScreen,
-      parentNavigatorKey: _rootNavigatorKey,
+      parentNavigatorKey: rootNavigatorKey,
       pageBuilder: (context, state) {
         return _page(state, ProfileScreen());
       },
@@ -65,7 +65,7 @@ final appRouter = GoRouter(
     GoRoute(
       path: '/product-detail',
       name: AppRoutes.productDetail,
-      parentNavigatorKey: _rootNavigatorKey,
+      parentNavigatorKey: rootNavigatorKey,
       pageBuilder: (context, state) {
         final data = state.extra as Map<String, dynamic>?;
 
@@ -80,7 +80,7 @@ final appRouter = GoRouter(
     GoRoute(
       path: '/product-category',
       name: AppRoutes.productCategory,
-      parentNavigatorKey: _rootNavigatorKey,
+      parentNavigatorKey: rootNavigatorKey,
       pageBuilder: (context, state) {
         final data = state.extra as Map<String, dynamic>?;
         return _page(
@@ -95,7 +95,7 @@ final appRouter = GoRouter(
     GoRoute(
       path: '/storyScreen',
       name: AppRoutes.storyScreen,
-      parentNavigatorKey: _rootNavigatorKey,
+      parentNavigatorKey: rootNavigatorKey,
       pageBuilder: (context, state) {
         final data = state.extra as Map<String, dynamic>;
 
@@ -112,7 +112,7 @@ final appRouter = GoRouter(
     GoRoute(
       path: '/myListing',
       name: AppRoutes.myListing,
-      parentNavigatorKey: _rootNavigatorKey,
+      parentNavigatorKey: rootNavigatorKey,
       pageBuilder: (context, state) {
         return _page(state, MyListingScreen());
       },
@@ -139,7 +139,7 @@ final appRouter = GoRouter(
                 GoRoute(
                   path: '/search',
                   name: AppRoutes.searchScreen,
-                  parentNavigatorKey: _rootNavigatorKey,
+                  parentNavigatorKey: rootNavigatorKey,
                   pageBuilder: (context, state) {
                     /* final title = state.uri.queryParameters['title'] ?? '';
                     final id =

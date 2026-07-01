@@ -1604,11 +1604,13 @@ class _VideoPlayerScreenState extends State<_VideoPlayerScreen> {
     super.initState();
     _controller = VideoPlayerController.networkUrl(Uri.parse(widget.videoUrl))
       ..initialize().then((_) {
+        if (!mounted) return;
         setState(() => _isInitialized = true);
         _controller.play();
         setState(() => _isPlaying = true);
       });
     _controller.addListener(() {
+      if (!mounted) return;
       if (_controller.value.isPlaying != _isPlaying) {
         setState(() => _isPlaying = _controller.value.isPlaying);
       }
@@ -1636,81 +1638,101 @@ class _VideoPlayerScreenState extends State<_VideoPlayerScreen> {
         iconTheme: const IconThemeData(color: Colors.white),
         title: const Text('Video', style: TextStyle(color: Colors.white)),
       ),
-      body: Center(
+      body: SafeArea(
         child: _isInitialized
-            ? Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            // Video player
-            AspectRatio(
-              aspectRatio: _controller.value.aspectRatio,
-              child: VideoPlayer(_controller),
-            ),
-            SizedBox(height: 16.h),
-            // Progress bar
-            ValueListenableBuilder(
-              valueListenable: _controller,
-              builder: (_, VideoPlayerValue value, __) {
-                final position = value.position;
-                final duration = value.duration;
-                return Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 16.w),
-                  child: Column(
-                    children: [
-                      VideoProgressIndicator(
-                        _controller,
-                        allowScrubbing: true,
-                        colors: const VideoProgressColors(
-                          playedColor: Color(0xFFFF5722),
-                          bufferedColor: Colors.white38,
-                          backgroundColor: Colors.white24,
-                        ),
-                      ),
-                      SizedBox(height: 8.h),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            ? Center(
+          // ✅ scroll instead of overflow when content height
+          // exceeds available space (portrait videos etc.)
+          child: SingleChildScrollView(
+            physics: const ClampingScrollPhysics(),
+            child: Column(
+              mainAxisSize: MainAxisSize.min, // ✅ don't take infinite height
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                // ✅ Constrain video height so it never exceeds
+                // a safe portion of the screen, especially for
+                // portrait/vertical aspect ratio videos.
+                ConstrainedBox(
+                  constraints: BoxConstraints(
+                    maxHeight: MediaQuery.of(context).size.height * 0.55,
+                  ),
+                  child: AspectRatio(
+                    aspectRatio: _controller.value.aspectRatio,
+                    child: VideoPlayer(_controller),
+                  ),
+                ),
+                SizedBox(height: 16.h),
+                // Progress bar
+                ValueListenableBuilder(
+                  valueListenable: _controller,
+                  builder: (_, VideoPlayerValue value, __) {
+                    final position = value.position;
+                    final duration = value.duration;
+                    return Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 16.w),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
                         children: [
-                          Text(
-                            _formatDuration(position),
-                            style: const TextStyle(
-                                color: Colors.white, fontSize: 12),
+                          VideoProgressIndicator(
+                            _controller,
+                            allowScrubbing: true,
+                            colors: const VideoProgressColors(
+                              playedColor: Color(0xFFFF5722),
+                              bufferedColor: Colors.white38,
+                              backgroundColor: Colors.white24,
+                            ),
                           ),
-                          Text(
-                            _formatDuration(duration),
-                            style: const TextStyle(
-                                color: Colors.white, fontSize: 12),
+                          SizedBox(height: 8.h),
+                          Row(
+                            mainAxisAlignment:
+                            MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                _formatDuration(position),
+                                style: const TextStyle(
+                                    color: Colors.white, fontSize: 12),
+                              ),
+                              Text(
+                                _formatDuration(duration),
+                                style: const TextStyle(
+                                    color: Colors.white, fontSize: 12),
+                              ),
+                            ],
                           ),
                         ],
                       ),
-                    ],
+                    );
+                  },
+                ),
+                SizedBox(height: 16.h),
+                // Play/Pause button
+                GestureDetector(
+                  onTap: () {
+                    _isPlaying ? _controller.pause() : _controller.play();
+                  },
+                  child: Container(
+                    padding: EdgeInsets.all(16.r),
+                    decoration: const BoxDecoration(
+                      color: Color(0xFFFF5722),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      _isPlaying
+                          ? Icons.pause_rounded
+                          : Icons.play_arrow_rounded,
+                      color: Colors.white,
+                      size: 32.sp,
+                    ),
                   ),
-                );
-              },
-            ),
-            SizedBox(height: 16.h),
-            // Play/Pause button
-            GestureDetector(
-              onTap: () {
-                _isPlaying ? _controller.pause() : _controller.play();
-              },
-              child: Container(
-                padding: EdgeInsets.all(16.r),
-                decoration: const BoxDecoration(
-                  color: Color(0xFFFF5722),
-                  shape: BoxShape.circle,
                 ),
-                child: Icon(
-                  _isPlaying
-                      ? Icons.pause_rounded
-                      : Icons.play_arrow_rounded,
-                  color: Colors.white,
-                  size: 32.sp,
-                ),
-              ),
+                SizedBox(height: 24.h), // ✅ bottom breathing room
+              ],
             ),
-          ],
+          ),
         )
-            : const CircularProgressIndicator(color: Color(0xFFFF5722)),
+            : const Center(
+          child: CircularProgressIndicator(color: Color(0xFFFF5722)),
+        ),
       ),
     );
   }

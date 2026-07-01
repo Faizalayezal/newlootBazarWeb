@@ -12,14 +12,23 @@ class DioHelper {
 
   final Dio dio = DioClient().dio;
 
+  String _extractError(DioException e) {
+    final data = e.response?.data;
+    if (data is Map<String, dynamic> && data['message'] != null) {
+      return data['message'].toString();
+    }
+    if (data is String && data.isNotEmpty) return data;
+    return e.message ?? "Something went wrong";
+  }
+
   Future<Map<String, dynamic>> get({required String url, Map<String, dynamic>? queryParameters}) async {
     try {
       final response = await dio.get(url, queryParameters: queryParameters,);
       return response.data as Map<String, dynamic>;
     } on DioException catch (e) {
-      debugPrint("--------17: ${e.response?.statusCode}");
-      debugPrint("--------18:  ${e.response?.data}");
-      throw Exception("API FAILED");
+      debugPrint("--------29: ${e.response?.statusCode}");
+      debugPrint("--------30:  ${e.response?.data}");
+      throw Exception(_extractError(e));
     }
   }
 
@@ -31,9 +40,9 @@ class DioHelper {
       final response = await dio.get(url, queryParameters: queryParameters);
       return response.data; // ← cast mat karo, as-is return karo
     } on DioException catch (e) {
-      debugPrint("--------17: ${e.response?.statusCode}");
-      debugPrint("--------18: ${e.response?.data}");
-      throw Exception("API FAILED");
+      debugPrint("--------43: ${e.response?.statusCode}");
+      debugPrint("--------44: ${e.response?.data}");
+      throw Exception(_extractError(e));
     }
   }
 
@@ -42,9 +51,9 @@ class DioHelper {
       final response = await dio.get(url);
       return response.data as List<dynamic>;
     } on DioException catch (e) {
-      debugPrint("GET ERROR -> ${e.response?.statusCode}");
-      debugPrint("GET DATA -> ${e.response?.data}");
-      throw Exception(e.response?.data ?? "API FAILED");
+      debugPrint("--------54: ${e.response?.statusCode}");
+      debugPrint("--------55: ${e.response?.data}");
+      throw Exception(_extractError(e));
     }
   }
 
@@ -56,9 +65,9 @@ class DioHelper {
       final response = await dio.post(url, data: requestBody);
       return response.data as Map<String, dynamic>;
     } on DioException catch (e) {
-      debugPrint("POST ERROR → ${e.response?.statusCode}");
-      debugPrint("POST DATA → ${e.response?.data}");
-      throw Exception(e.response?.data ?? "API FAILED");
+      debugPrint("--------68: ${e.response?.statusCode}");
+      debugPrint("--------69: ${e.response?.data}");
+      throw Exception(_extractError(e));
     }
   }
 
@@ -70,9 +79,9 @@ class DioHelper {
       final response = await dio.put(url, data: formData);
       return response.data;
     } on DioException catch (e) {
-      debugPrint("POST ERROR → ${e.response?.statusCode}");
-      debugPrint("POST DATA → ${e.response?.data}");
-      throw Exception(e.response?.data ?? "API FAILED");
+      debugPrint("--------82: ${e.response?.statusCode}");
+      debugPrint("--------83: ${e.response?.data}");
+      throw Exception(_extractError(e));
     }
   }
   Future<dynamic> delete({
@@ -86,9 +95,9 @@ class DioHelper {
       );
       return response.data;
     } on DioException catch (e) {
-      debugPrint("DELETE ERROR → ${e.response?.statusCode}");
-      debugPrint("DELETE DATA → ${e.response?.data}");
-      throw Exception(e.response?.data ?? "API FAILED");
+      debugPrint("--------98: ${e.response?.statusCode}");
+      debugPrint("--------99: ${e.response?.data}");
+      throw Exception(_extractError(e));
     }
   }
 }

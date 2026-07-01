@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
+import 'package:lootbazarweb/providerd/CityState.dart';
 import 'package:lootbazarweb/providerd/category/CategoryNotifier.dart';
 import 'package:lootbazarweb/providerd/register/RegisterNotifier.dart';
 import 'package:lootbazarweb/route/AppRoutes.dart';
@@ -231,6 +232,9 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
 
   Future<void> _init() async {
     debugPrint("Start");
+
+    // Fire-and-forget: cities load in background, doesn't block splash flow
+    ref.read(cityProvider.notifier).loadCities();
 
     await Future.delayed(const Duration(seconds: 3));
 
