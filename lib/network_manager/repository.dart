@@ -17,6 +17,16 @@ import 'package:lootbazarweb/response/requestion_response/UpdateProfileRequest.d
 class Repository {
   final DioHelper _dioHelper = DioHelper();
 
+  Future<MultipartFile> createMultipartFile(XFile file) async {
+    if (kIsWeb) {
+      final bytes = await file.readAsBytes();
+
+      return MultipartFile.fromBytes(bytes, filename: file.name);
+    } else {
+      return MultipartFile.fromFile(file.path, filename: file.name);
+    }
+  }
+
   Future<RegisterResponse> register({required String mobileNo}) async {
     try {
       final response = await _dioHelper.post(
@@ -60,16 +70,31 @@ class Repository {
   }) async {
     try {
       // FormData banao kyunki image file hai
+      MultipartFile? profileImage;
+
+      if (request.profileImage != null) {
+        if (kIsWeb) {
+          // Flutter Web
+          final bytes = await request.profileImage!.readAsBytes();
+
+          profileImage = MultipartFile.fromBytes(
+            bytes,
+            filename: request.profileImage!.name,
+          );
+        } else {
+          // Android / iOS
+          profileImage = await MultipartFile.fromFile(
+            request.profileImage!.path,
+            filename: request.profileImage!.name,
+          );
+        }
+      }
       final formData = FormData.fromMap({
         'name': request.name,
         'address': request.address,
         'pincode': request.pincode,
         'interests': request.interests,
-        if (request.profileImage != null)
-          'profileImage': await MultipartFile.fromBytes(
-            await request.profileImage!.readAsBytes(),
-            filename: request.profileImage!.path.split('/').last,
-          ),
+        if (profileImage != null) 'profileImage': profileImage,
       });
 
       final response = await _dioHelper.putFormData(
@@ -130,7 +155,7 @@ class Repository {
       }
 
       return ProductListResponse.fromJson(response);
-    } catch (e,s) {
+    } catch (e, s) {
       debugPrint('🔍 BUILD: 121=${e.toString()}');
       debugPrint('🔍 BUILD: 122=${s.toString()}');
 
@@ -162,7 +187,7 @@ class Repository {
     required String userId,
     required String phoneNumber,
     required String location,
-    required List<String> imagePaths,
+    required List<XFile> imagePaths,
   }) async {
     try {
       final formData = FormData();
@@ -185,13 +210,8 @@ class Repository {
 
       // images array
       for (final path in imagePaths) {
-        final fileName = path.split('/').last;
-        formData.files.add(
-          MapEntry(
-            'images',
-            await MultipartFile.fromFile(path, filename: fileName),
-          ),
-        );
+        // final fileName = path.split('/').last;
+        formData.files.add(MapEntry('images', await createMultipartFile(path)));
       }
 
       await _dioHelper.post(
@@ -217,6 +237,7 @@ class Repository {
       throw Exception('Get product detail failed: $e');
     }
   }
+
   // repository.dart me add karo
 
   Future<UploadVideoResponse> uploadVideo({
@@ -228,10 +249,7 @@ class Repository {
       final formData = FormData.fromMap({
         'userId': userId,
         'productId': productId,
-        'video': await MultipartFile.fromFile(
-          videoFile.path,
-          filename: videoFile.path.split('/').last,
-        ),
+        'video': await createMultipartFile(videoFile),
       });
       final response = await _dioHelper.post(
         url: ApiConstants.uploadVideo,
@@ -245,15 +263,14 @@ class Repository {
 
   Future<VideoListResponse> getVideos() async {
     try {
-      final response = await _dioHelper.getList(
-        url: ApiConstants.videosApi,
-      );
+      final response = await _dioHelper.getList(url: ApiConstants.videosApi);
       // Response List hai directly
       return VideoListResponse.fromJson(response as List);
     } catch (e) {
       throw Exception('Get videos failed: $e');
     }
   }
+
   Future<void> trackProductView({
     required String productId,
     required String viewerUserId,
@@ -262,15 +279,13 @@ class Repository {
     try {
       await _dioHelper.post(
         url: '${ApiConstants.getProducts}/$productId/view',
-        requestBody: {
-          'viewerUserId': viewerUserId,
-          'type': type,
-        },
+        requestBody: {'viewerUserId': viewerUserId, 'type': type},
       );
     } catch (e) {
       throw Exception('Track product view failed: $e');
     }
   }
+
   Future<void> deleteProductImage({
     required String productId,
     required String imageId,
@@ -285,17 +300,14 @@ class Repository {
     }
   }
 
-  Future<void> deleteProductVideo({
-    required String videoId,
-  }) async {
+  Future<void> deleteProductVideo({required String videoId}) async {
     try {
-      await _dioHelper.delete(
-        url: '${ApiConstants.deleteStatus}/$videoId',
-      );
+      await _dioHelper.delete(url: '${ApiConstants.deleteStatus}/$videoId');
     } catch (e) {
       throw Exception('Delete video failed: $e');
     }
   }
+
   // lib/network_manager/repository.dart
 
   Future<ProductModel> uploadImage({
@@ -307,10 +319,7 @@ class Repository {
       final formData = FormData.fromMap({
         'userId': userId,
         'productId': productId,
-        'image': await MultipartFile.fromFile(
-          imageFile.path,
-          filename: imageFile.name,
-        ),
+        'image': await createMultipartFile(imageFile),
       });
 
       final response = await _dioHelper.post(

@@ -5,13 +5,12 @@ import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:lootbazarweb/providerd/video/VideoListResponse.dart';
 import 'package:lootbazarweb/shared/story_whatsapp_buttons.dart';
-import 'package:flutter_story_presenter/flutter_story_presenter.dart';
 import 'package:video_player/video_player.dart';
 
 class StoryScreen extends StatefulWidget {
   final List<VideoItem> videos;
   final int initialIndex;
-  final VideoProduct productModel; // ✅ ye ab sirf "fallback" ke liye use hoga
+  final VideoProduct productModel;
 
   const StoryScreen({
     super.key,
@@ -63,7 +62,6 @@ class _StoryScreenState extends State<StoryScreen> {
           },
           itemBuilder: (context, index) {
             final videoItem = widget.videos[index];
-
             // Calculating the 3D cube perspective matrix
             return AnimatedBuilder(
               animation: _pageController,
@@ -151,7 +149,6 @@ class _ProductStoryPlayerState extends State<_ProductStoryPlayer> with SingleTic
 
   dynamic get user => widget.videoItem.user ?? widget.videoItem.userId;
  // dynamic get product => widget.videoItem.product ?? widget.videoItem.productId;
-
   @override
   void initState() {
     super.initState();
@@ -250,12 +247,12 @@ class _ProductStoryPlayerState extends State<_ProductStoryPlayer> with SingleTic
 
   @override
   Widget build(BuildContext context) {
-    final String location = widget.productModel.location ?? 'Gujarat';
-    final String moq = widget.productModel?.moq?.toString() ?? '1';
-    final String price = widget.productModel?.price?.toString() ?? '0';
-    final String stock = widget.productModel?.stock?.toString() ?? '0';
-    final String title = widget.productModel?.title ?? 'Product';
-    //final String phone = widget.productModel?.moq ?? user?.mobileno ?? '';
+    final String location = widget.videoItem.product.location??'';
+    final String moq = widget.videoItem.product.moq?.toString() ?? '1';
+    final String price = widget.videoItem.product.price?.toString() ?? '0';
+    final String stock = widget.videoItem.product.stock?.toString() ?? '0';
+    final String title = widget.videoItem.product.title ?? 'Product';
+    final String phone = widget.videoItem?.user.mobileno ?? user?.mobileno ?? '';
 
     return GestureDetector(
       onLongPressDown: (_) => _pauseStory(),
@@ -285,7 +282,7 @@ class _ProductStoryPlayerState extends State<_ProductStoryPlayer> with SingleTic
               child: Stack(
                 alignment: Alignment.center,
                 children: [
-                  if (widget.productModel?.imageUrls != null && widget.productModel.imageUrls.isNotEmpty)
+                  if (widget.productModel.imageUrls != null && widget.productModel.imageUrls.isNotEmpty)
                     CachedNetworkImage(
                       imageUrl: widget.productModel.imageUrls[0],
                       fit: BoxFit.cover,

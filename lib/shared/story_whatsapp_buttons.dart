@@ -51,14 +51,11 @@ class StoryWhatsappButtons extends StatelessWidget {
                 ),
               ),
               child: Center(
-                child: SvgPicture.asset(
-                  'assets/images/whatsapp.svg',
-                  height: 35.h,
-                  width: 35.w,
-                  colorFilter: const ColorFilter.mode(
-                    Colors.white,
-                    BlendMode.srcIn,
-                  ),
+                child: Image.asset(
+                  "assets/images/chaticon.png",
+                  height: 30.h,
+                  width: 30.w,
+                  fit: BoxFit.cover,
                 ),
               ),
             ),

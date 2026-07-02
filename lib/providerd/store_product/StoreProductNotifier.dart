@@ -1,6 +1,7 @@
 // lib/providers/store_product/store_product_provider.dart
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:lootbazarweb/providerd/di/repositoryProvider.dart';
 import '../../network_manager/repository.dart';
 import 'store_product_state.dart';
@@ -21,7 +22,7 @@ class StoreProductNotifier extends StateNotifier<StoreProductState> {
     required String userId,
     required String phoneNumber,
     required String location,
-    required List<String> imagePaths,
+    required List<XFile> imagePaths,
   }) async {
     state = state.copyWith(
       status: ProductStatus.loading,

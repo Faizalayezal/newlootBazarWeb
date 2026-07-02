@@ -63,11 +63,13 @@ class VideoItem {
 class VideoUser {
   final String id;
   final String name;
+  final String mobileno;
   final String profileImage;
 
   VideoUser({
     required this.id,
     required this.name,
+    required this.mobileno,
     required this.profileImage,
   });
 
@@ -75,6 +77,7 @@ class VideoUser {
     return VideoUser(
       id: json['_id'] ?? '',
       name: json['name'] ?? '',
+      mobileno: json['mobileno'] ?? '',
       profileImage: json['profileImage'] ?? '',
     );
   }

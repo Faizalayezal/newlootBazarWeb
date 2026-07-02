@@ -773,7 +773,7 @@ class _SellScreenState extends ConsumerState<SellScreen> {
           userId: SharedPrefs().getString(userId) ?? '',
           phoneNumber: phone,
           location: _cityController.text.trim(),
-          imagePaths: imagePaths,
+          imagePaths: selectedImages,
         );
   }
 
