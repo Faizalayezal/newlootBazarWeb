@@ -1,4 +1,3 @@
-
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -26,6 +25,7 @@ class StoryScreen extends StatefulWidget {
 class _StoryScreenState extends State<StoryScreen> {
   late PageController _pageController;
   late int _currentIndex;
+  double _dismissProgress = 0.0;
 
   @override
   void initState() {
@@ -47,71 +47,92 @@ class _StoryScreenState extends State<StoryScreen> {
   Widget build(BuildContext context) {
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: const SystemUiOverlayStyle(
-        statusBarColor: Colors.black,
+        statusBarColor: Colors.transparent,
         statusBarIconBrightness: Brightness.light,
       ),
       child: Scaffold(
-        backgroundColor: Colors.black,
-        body: PageView.builder(
-          controller: _pageController,
-          itemCount: widget.videos.length,
-          onPageChanged: (index) {
-            setState(() {
-              _currentIndex = index;
-            });
-          },
-          itemBuilder: (context, index) {
-            final videoItem = widget.videos[index];
-            // Calculating the 3D cube perspective matrix
-            return AnimatedBuilder(
-              animation: _pageController,
-              builder: (context, child) {
-                double value = 0.0;
-                if (_pageController.position.haveDimensions) {
-                  value = index.toDouble() - (_pageController.page ?? 0);
-                } else {
-                  value = index.toDouble() - widget.initialIndex.toDouble();
-                }
-
-                // Absolute rotation value clamped between -1.57 and 1.57
-                final double rotation = (value * -0.45).clamp(-1.57, 1.57);
-                final bool isLeft = value < 0;
-
-                return Transform(
-                  alignment: isLeft ? Alignment.centerRight : Alignment.centerLeft,
-                  transform: Matrix4.identity()
-                    ..setEntry(3, 2, 0.0015) // Depth perspective multiplier
-                    ..rotateY(rotation),
-                  child: child,
-                );
-              },
-              child: _ProductStoryPlayer(
-                key: ValueKey('story_player_${videoItem.id ?? videoItem.hashCode}'),
-                videoItem: videoItem,
-                isActive: index == _currentIndex,
-                onNextStory: () {
-                  if (_currentIndex < widget.videos.length - 1) {
-                    _pageController.nextPage(
-                      duration: const Duration(milliseconds: 350),
-                      curve: Curves.easeInOut,
-                    );
-                  } else {
-                    Navigator.pop(context);
-                  }
-                },
-                onPrevStory: () {
-                  if (_currentIndex > 0) {
-                    _pageController.previousPage(
-                      duration: const Duration(milliseconds: 350),
-                      curve: Curves.easeInOut,
-                    );
-                  }
-                },
-                onClose: () => Navigator.pop(context),
-                  productModel:widget.productModel,
+        backgroundColor: Colors.transparent,
+        body: Stack(
+          children: [
+            // Black background that fades out as you swipe down
+            Positioned.fill(
+              child: Opacity(
+                opacity: (1 - _dismissProgress * 2.0).clamp(0.0, 1.0),
+                child: Container(color: Colors.black),
               ),
-            );
-          },
+            ),
+            Dismissible(
+              key: const Key('story_screen_dismissible'),
+              direction: DismissDirection.down,
+              onUpdate: (details) {
+                setState(() {
+                  _dismissProgress = details.progress;
+                });
+              },
+              onDismissed: (_) => Navigator.pop(context),
+              child: PageView.builder(
+                controller: _pageController,
+                itemCount: widget.videos.length,
+                onPageChanged: (index) {
+                  setState(() {
+                    _currentIndex = index;
+                  });
+                },
+                itemBuilder: (context, index) {
+                  final videoItem = widget.videos[index];
+                  // Calculating the 3D cube perspective matrix
+                  return AnimatedBuilder(
+                    animation: _pageController,
+                    builder: (context, child) {
+                      double value = 0.0;
+                      if (_pageController.position.haveDimensions) {
+                        value = index.toDouble() - (_pageController.page ?? 0);
+                      } else {
+                        value = index.toDouble() - widget.initialIndex.toDouble();
+                      }
+
+                      // Absolute rotation value clamped between -1.57 and 1.57
+                      final double rotation = (value * -0.45).clamp(-1.57, 1.57);
+                      final bool isLeft = value < 0;
+
+                      return Transform(
+                        alignment: isLeft ? Alignment.centerRight : Alignment.centerLeft,
+                        transform: Matrix4.identity()
+                          ..setEntry(3, 2, 0.0015) // Depth perspective multiplier
+                          ..rotateY(rotation),
+                        child: child,
+                      );
+                    },
+                    child: _ProductStoryPlayer(
+                      key: ValueKey('story_player_${videoItem.id ?? videoItem.hashCode}'),
+                      videoItem: videoItem,
+                      isActive: index == _currentIndex,
+                      onNextStory: () {
+                        if (_currentIndex < widget.videos.length - 1) {
+                          _pageController.nextPage(
+                            duration: const Duration(milliseconds: 350),
+                            curve: Curves.easeInOut,
+                          );
+                        } else {
+                          Navigator.pop(context);
+                        }
+                      },
+                      onPrevStory: () {
+                        if (_currentIndex > 0) {
+                          _pageController.previousPage(
+                            duration: const Duration(milliseconds: 350),
+                            curve: Curves.easeInOut,
+                          );
+                        }
+                      },
+                      onClose: () => Navigator.pop(context),
+                      productModel: widget.productModel,
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -148,7 +169,7 @@ class _ProductStoryPlayerState extends State<_ProductStoryPlayer> with SingleTic
   bool _isPaused = false;
 
   dynamic get user => widget.videoItem.user ?? widget.videoItem.userId;
- // dynamic get product => widget.videoItem.product ?? widget.videoItem.productId;
+
   @override
   void initState() {
     super.initState();
@@ -247,24 +268,17 @@ class _ProductStoryPlayerState extends State<_ProductStoryPlayer> with SingleTic
 
   @override
   Widget build(BuildContext context) {
-    final String location = widget.videoItem.product.location??'';
+    final String location = widget.videoItem.product.location ?? '';
     final String moq = widget.videoItem.product.moq?.toString() ?? '1';
     final String price = widget.videoItem.product.price?.toString() ?? '0';
     final String stock = widget.videoItem.product.stock?.toString() ?? '0';
     final String title = widget.videoItem.product.title ?? 'Product';
     final String phone = widget.videoItem?.user.mobileno ?? user?.mobileno ?? '';
 
-    return GestureDetector(
-      onLongPressDown: (_) => _pauseStory(),
-      onLongPressEnd: (_) => _resumeStory(),
-      onTapUp: (details) {
-        final screenWidth = MediaQuery.of(context).size.width;
-        if (details.globalPosition.dx < screenWidth * 0.35) {
-          widget.onPrevStory();
-        } else {
-          widget.onNextStory();
-        }
-      },
+    return Listener(
+      onPointerDown: (_) => _pauseStory(),
+      onPointerUp: (_) => _resumeStory(),
+      onPointerCancel: (_) => _resumeStory(),
       child: Stack(
         fit: StackFit.expand,
         children: [
@@ -273,26 +287,26 @@ class _ProductStoryPlayerState extends State<_ProductStoryPlayer> with SingleTic
             color: Colors.black,
             child: _isInitialized && _videoController != null
                 ? Center(
-              child: AspectRatio(
-                aspectRatio: _videoController!.value.aspectRatio,
-                child: VideoPlayer(_videoController!),
-              ),
-            )
-                : Center(
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
-                  if (widget.productModel.imageUrls != null && widget.productModel.imageUrls.isNotEmpty)
-                    CachedNetworkImage(
-                      imageUrl: widget.productModel.imageUrls[0],
-                      fit: BoxFit.cover,
-                      width: double.infinity,
-                      height: double.infinity,
+                    child: AspectRatio(
+                      aspectRatio: _videoController!.value.aspectRatio,
+                      child: VideoPlayer(_videoController!),
                     ),
-                  const CircularProgressIndicator(color: Color(0xFFFF5722)),
-                ],
-              ),
-            ),
+                  )
+                : Center(
+                    child: Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        if (widget.productModel.imageUrls != null && widget.productModel.imageUrls.isNotEmpty)
+                          CachedNetworkImage(
+                            imageUrl: widget.productModel.imageUrls[0],
+                            fit: BoxFit.cover,
+                            width: double.infinity,
+                            height: double.infinity,
+                          ),
+                        const CircularProgressIndicator(color: Color(0xFFFF5722)),
+                      ],
+                    ),
+                  ),
           ),
 
           // Top Segment Progress line
@@ -343,17 +357,17 @@ class _ProductStoryPlayerState extends State<_ProductStoryPlayer> with SingleTic
                     height: 38.w,
                     child: user?.profileImage != null && user.profileImage.isNotEmpty
                         ? CachedNetworkImage(
-                      imageUrl: user.profileImage,
-                      fit: BoxFit.cover,
-                      errorWidget: (_, __, ___) => Container(
-                        color: Colors.grey.shade800,
-                        child: const Icon(Icons.person, color: Colors.white),
-                      ),
-                    )
+                            imageUrl: user.profileImage,
+                            fit: BoxFit.cover,
+                            errorWidget: (_, __, ___) => Container(
+                              color: Colors.grey.shade800,
+                              child: const Icon(Icons.person, color: Colors.white),
+                            ),
+                          )
                         : Container(
-                      color: Colors.grey.shade800,
-                      child: const Icon(Icons.person, color: Colors.white),
-                    ),
+                            color: Colors.grey.shade800,
+                            child: const Icon(Icons.person, color: Colors.white),
+                          ),
                   ),
                 ),
                 SizedBox(width: 10.w),
@@ -382,7 +396,7 @@ class _ProductStoryPlayerState extends State<_ProductStoryPlayer> with SingleTic
                 IconButton(
                   icon: const Icon(Icons.close, color: Colors.white),
                   onPressed: widget.onClose,
-                )
+                ),
               ],
             ),
           ),
@@ -400,7 +414,7 @@ class _ProductStoryPlayerState extends State<_ProductStoryPlayer> with SingleTic
               title: title,
               onTap: () {
                 // Perform WhatsApp launch or call
-              //  print("Inquiry regarding: $title via phone: $phone");
+                //  print("Inquiry regarding: $title via phone: $phone");
               },
             ),
           ),

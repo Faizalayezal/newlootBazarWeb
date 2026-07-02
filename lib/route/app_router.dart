@@ -106,6 +106,7 @@ final appRouter = GoRouter(
             initialIndex: data['initialIndex'] as int,
             productModel: data['productModel'] as VideoProduct,
           ),
+          opaque: false,
         );
       },
     ),
@@ -195,10 +196,11 @@ final appRouter = GoRouter(
   ],
 );
 
-CustomTransitionPage _page(GoRouterState state, Widget child) {
+CustomTransitionPage _page(GoRouterState state, Widget child, {bool opaque = true}) {
   return CustomTransitionPage(
     key: state.pageKey,
     child: child,
+    opaque: opaque,
     transitionsBuilder: (context, animation, _, child) {
       return FadeTransition(
         opacity: animation,

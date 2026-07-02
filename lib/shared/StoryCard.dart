@@ -2,12 +2,8 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
-import 'package:lootbazarweb/providerd/Products/ProductModel.dart';
-import 'package:lootbazarweb/providerd/Products/ProductState.dart';
 import 'package:lootbazarweb/providerd/video/VideoListResponse.dart';
 import 'package:lootbazarweb/route/AppRoutes.dart';
-import 'package:lootbazarweb/screens/StoryScreen.dart';
-import 'package:lootbazarweb/utils/preferences_key.dart';
 
 class StoryCard extends StatelessWidget {
   final VideoItem video;
@@ -24,10 +20,7 @@ class StoryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final dynamic user = video.user ?? video.user?.id??'';
-    final dynamic product = video.product ?? video.id;
-    final String sellerName = user?.name ?? 'Seller';
-
+    final dynamic user = video.user;
     final productThumb = video.product?.imageUrls.isNotEmpty == true
         ? video.product!.imageUrls.first
         : null;
@@ -36,74 +29,69 @@ class StoryCard extends StatelessWidget {
     return GestureDetector(
       onTap: () {
         context.pushNamed(
-            AppRoutes.storyScreen,
-            extra: {
-              'videos': allVideos,
-              'initialIndex': initialIndex,
-              'productModel': productModel,
-            },);
+          AppRoutes.storyScreen,
+          extra: {
+            'videos': allVideos,
+            'initialIndex': initialIndex,
+            'productModel': productModel,
+          },
+        );
       },
-      child: SizedBox(
-        width: 76.w,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
+      child: Container(
+        width: 90.w,
+        margin: EdgeInsets.only(bottom: 25.h, right: 12.w),
+        child: Stack(
+          clipBehavior: Clip.none,
+          alignment: Alignment.bottomCenter,
           children: [
-            Stack(
-              alignment: Alignment.center,
-              children: [
-                Container(
-                  width: 72.w,
-                  height: 72.w,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: const Color(0xFFFF5722),
-                      width: 2.5,
-                    ),
-                  ),
-                ),
-                ClipOval(
-                  child: SizedBox(
-                    width: 64.w,
-                    height: 64.w,
-                    child: productThumb != null
-                        ? CachedNetworkImage(
-                      imageUrl: productThumb,
-                      fit: BoxFit.cover,
-                      placeholder: (_, __) => Container(
-                        color: const Color(0xFFFFE6DC),
-                      ),
-                      errorWidget: (_, __, ___) =>
-                          _profileFallback(profileImage),
-                    )
-                        : _profileFallback(profileImage),
-                  ),
-                ),
-                Container(
-                  width: 20.w,
-                  height: 20.w,
-                  decoration: BoxDecoration(
-                    color: Colors.black.withOpacity(0.4),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(
-                    Icons.play_arrow_rounded,
-                    color: Colors.white,
-                    size: 14.sp,
-                  ),
-                ),
-              ],
+            // Main rectangular card
+            Container(
+              height: 150.h,
+              width: 90.w,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(15.r),
+                color: const Color(0xFFB39EB5), // Card background color from image
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(15.r),
+                child: productThumb != null
+                    ? CachedNetworkImage(
+                        imageUrl: productThumb,
+                        fit: BoxFit.cover,
+                        placeholder: (_, __) => Container(color: const Color(0xFFB39EB5)),
+                        errorWidget: (_, __, ___) => Container(color: const Color(0xFFB39EB5)),
+                      )
+                    : Container(color: const Color(0xFFB39EB5)),
+              ),
             ),
-            SizedBox(height: 6.h),
-            Text(
-              product?.title ?? sellerName,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 10.sp,
-                fontWeight: FontWeight.w600,
-                color: const Color(0xFF111111),
+            // Circular profile image overlapping the bottom
+            Positioned(
+              bottom: -20.h,
+              child: Container(
+                width: 44.w,
+                height: 44.w,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: Colors.white,
+                  border: Border.all(color: const Color(0xFFB39EB5), width: 2.0),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.1),
+                      blurRadius: 6,
+                      offset: const Offset(0, 3),
+                    ),
+                  ],
+                ),
+                child: ClipOval(
+                  child: profileImage.isNotEmpty
+                      ? CachedNetworkImage(
+                          imageUrl: profileImage,
+                          fit: BoxFit.cover,
+                          placeholder: (_, __) => _placeholderIcon(),
+                          errorWidget: (_, __, ___) => _placeholderIcon(),
+                        )
+                      : _placeholderIcon(),
+                ),
               ),
             ),
           ],
@@ -112,21 +100,14 @@ class StoryCard extends StatelessWidget {
     );
   }
 
-  Widget _profileFallback(String imageUrl) {
-    if (imageUrl.isNotEmpty) {
-      return CachedNetworkImage(
-        imageUrl: imageUrl,
-        fit: BoxFit.cover,
-        placeholder: (_, __) => Container(color: const Color(0xFFFFE6DC)),
-        errorWidget: (_, __, ___) => Container(
-          color: const Color(0xFFFFE6DC),
-          child: const Icon(Icons.person, color: Colors.white),
-        ),
-      );
-    }
+  Widget _placeholderIcon() {
     return Container(
-      color: const Color(0xFFFFE6DC),
-      child: const Icon(Icons.person, color: Colors.white),
+      color: Colors.white,
+      child: Icon(
+        Icons.person_outline,
+        color: const Color(0xFFB39EB5),
+        size: 24.sp,
+      ),
     );
   }
 }
