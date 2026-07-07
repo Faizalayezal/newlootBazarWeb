@@ -3,11 +3,9 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lootbazarweb/core/theme.dart';
 import 'package:lootbazarweb/providerd/category/CategoryNotifier.dart';
-import 'package:lootbazarweb/providerd/otp/OtpNotifier.dart';
 import 'package:lootbazarweb/providerd/register/RegisterNotifier.dart';
 import 'package:lootbazarweb/route/AppRoutes.dart';
 import 'package:lootbazarweb/shared/AnimatedCategoryCard.dart';
@@ -23,12 +21,6 @@ class InterestsScreen extends ConsumerStatefulWidget {
 
 class _InterestsScreenState extends ConsumerState<InterestsScreen>  with SingleTickerProviderStateMixin  {
 
-  final List<Color> colors = [
-    AppTheme.rColor1,
-    AppTheme.rColor2,
-    AppTheme.rColor3,
-    AppTheme.rColor4,
-  ];
 
   List<Color> assignedColors = [];
 
@@ -44,10 +36,9 @@ class _InterestsScreenState extends ConsumerState<InterestsScreen>  with SingleT
   }
   void _assignColors(int count) {
     if (assignedColors.length != count) {
-      final random = Random();
       assignedColors = List.generate(
         count,
-            (index) => colors[random.nextInt(colors.length)],
+            (index) => AppTheme.pastelColors[index % AppTheme.pastelColors.length],
       );
     }
   }
@@ -73,7 +64,7 @@ class _InterestsScreenState extends ConsumerState<InterestsScreen>  with SingleT
       bottomSheet:  Container(
         color: AppTheme.background,
         child: Padding(
-          padding: EdgeInsets.only(left: 24.w, right: 24.w, bottom: 170.h),
+          padding: EdgeInsets.only(left: 24.w, right: 24.w, bottom: 40.h),
           child: Consumer(
             builder: (context, ref, child) {
               final registerState = ref.watch(registerProvider);
@@ -176,20 +167,19 @@ class _InterestsScreenState extends ConsumerState<InterestsScreen>  with SingleT
                     itemBuilder: (context, index) {
                       final category = categories[index];
                       final isSelected = selectedIds.contains(category.id);
-                      return GestureDetector(
+                      return AnimatedCategoryCard(
+                        title: category.name,
+                        image: category.image,
+                        color: assignedColors[index],
+                        delay: index * 100,
+                        isSelected: isSelected,
                         onTap: () {
                           ref.read(categoryProvider.notifier).toggleSelection(category.id);
                         },
-                        child: AnimatedCategoryCard(
-                          title: category.name,
-                          color: assignedColors[index],
-                          delay: index * 100,
-                          isSelected: isSelected,
-                        ),
                       );
                     },
                   ),
-
+                  150.verticalSpace,
                 ],
               ),
             ),

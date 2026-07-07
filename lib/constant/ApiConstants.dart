@@ -17,6 +17,8 @@ class ApiConstants {
   static const String deleteStatus = '/frontend/status';
   static const String uploadImage = '/frontend/products/upload-image';
   static const String getNotification = '/frontend/notifications';
+  static const String paymentStatus = '/frontend/products/payment-status';
+  static const String validateCoupon = '/frontend/coupons/validate';
 
   // ---------- Countries/Cities API (different base) ----------
   static const String citiesBaseUrl = 'https://countriesnow.space/api/v0.1';

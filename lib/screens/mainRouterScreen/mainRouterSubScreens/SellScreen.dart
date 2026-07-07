@@ -10,7 +10,6 @@ import 'package:image_picker/image_picker.dart';
 import 'package:lootbazarweb/bottomNav/NavBarController.dart';
 import 'package:lootbazarweb/core/theme.dart';
 import 'package:lootbazarweb/providerd/CityState.dart';
-import 'package:lootbazarweb/providerd/Products/ProductNotifier.dart';
 import 'package:lootbazarweb/providerd/currantUserListning/CurrentProductNotifier.dart';
 import 'package:lootbazarweb/providerd/store_product/StoreProductNotifier.dart';
 import 'package:lootbazarweb/providerd/store_product/store_product_state.dart';
@@ -20,14 +19,17 @@ import 'package:lootbazarweb/shared/CityPickerSheet.dart';
 import 'package:lootbazarweb/shared/ListingSuccessDialog.dart';
 import 'package:lootbazarweb/shared/PremiumLoadingButton.dart';
 import 'package:lootbazarweb/shared/apply_buttons.dart';
-import 'package:lootbazarweb/shared/get_photo_card.dart';
 import 'package:lootbazarweb/shared/main_buttons.dart';
 import 'package:lootbazarweb/shared/my_listing.dart';
 import 'package:lootbazarweb/tool/MyListingShimmer.dart';
 import 'package:lootbazarweb/tool/SwipeButton.dart';
 import 'package:lootbazarweb/utils/preferences.dart';
 import 'package:lootbazarweb/utils/preferences_key.dart';
-import 'package:page_transition/page_transition.dart';
+import 'package:razorpay_flutter/razorpay_flutter.dart';
+import 'package:workmanager/workmanager.dart';
+import 'package:confetti/confetti.dart';
+import 'package:lootbazarweb/providerd/di/repositoryProvider.dart';
+import 'package:audioplayers/audioplayers.dart';
 
 class SellScreen extends ConsumerStatefulWidget {
   const SellScreen({super.key});
@@ -57,42 +59,79 @@ class _SellScreenState extends ConsumerState<SellScreen> {
   List<String> imagePaths = [];
   List<XFile> selectedImages = [];
 
-  int? paymentStatus; // Google Pay response status
+  int? paymentStatus;
 
   GlobalKey<FormState> mFormKey = GlobalKey<FormState>();
+
+  late Razorpay _razorpay;
+  String? _currentProductId;
+
+  late ConfettiController _confettiController;
+  final AudioPlayer _audioPlayer = AudioPlayer();
+  Map<String, dynamic>? _couponResult;
+  bool _isCouponValidating = false;
+  double _finalAmount = 33.0;
 
   @override
   void initState() {
     super.initState();
+    _razorpay = Razorpay();
+    _razorpay.on(Razorpay.EVENT_PAYMENT_SUCCESS, _handlePaymentSuccess);
+    _razorpay.on(Razorpay.EVENT_PAYMENT_ERROR, _handlePaymentError);
+    _razorpay.on(Razorpay.EVENT_EXTERNAL_WALLET, _handleExternalWallet);
+
+    _confettiController = ConfettiController(duration: const Duration(seconds: 3));
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadCategoriesFromPrefs();
       ref.read(currentProductProvider.notifier).getCurrentUserProducts();
       _cityController.text = SharedPrefs().getString(address) ?? '';
       _phoneController.text = SharedPrefs().getString(phoneNumber) ?? '';
+      
+      final savedAmount = SharedPrefs().getString(listingAmount);
+      if (savedAmount != null) {
+        setState(() {
+          _finalAmount = double.tryParse(savedAmount) ?? 33.0;
+        });
+      }
     });
   }
+
+  void _handlePaymentSuccess(PaymentSuccessResponse response) async {
+    if (_currentProductId != null) {
+      final String userIdValue = SharedPrefs().getString(userId) ?? '';
+      await ref.read(storeProductProvider.notifier).updatePaymentStatus(
+            productId: _currentProductId!,
+            userId: userIdValue,
+            paymentStatus: 'paid',
+          );
+      _showSuccessDialog();
+      _clearForm();
+    }
+  }
+
+  void _handlePaymentError(PaymentFailureResponse response) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text("Payment Failed: ${response.message}"),
+        backgroundColor: Colors.red,
+      ),
+    );
+  }
+
+  void _handleExternalWallet(ExternalWalletResponse response) {}
 
   Future<void> _loadCategoriesFromPrefs() async {
     final categories = await SharedPrefs().getCategories();
     dataString.value = categories
         .map(
           (c) => {
-            'id': c.id, // CategoryModel ka id field
-            'name': c.name, // CategoryModel ka name field
+            'id': c.id,
+            'name': c.name,
             'selected': false,
           },
         )
         .toList();
-  }
-
-  Future<void> _requestPermissions() async {
-    /* var status = await Permission.photos.request();
-    if (!status.isGranted) {
-      openAppSettings();
-    } else {
-
-    }*/
-    _pickImages();
   }
 
   Future<void> _pickImages() async {
@@ -111,15 +150,11 @@ class _SellScreenState extends ConsumerState<SellScreen> {
 
   void _selectItem(int index) {
     final newList = [...dataString.value];
-
     newList[index] = {
       ...newList[index],
       'selected': !(newList[index]['selected'] as bool),
     };
-
     dataString.value = newList;
-
-    // selected names TextField me show karne ke liye
     _categoryController.text = newList
         .where((e) => e['selected'] == true)
         .map((e) => e['name'])
@@ -134,34 +169,29 @@ class _SellScreenState extends ConsumerState<SellScreen> {
   }
 
   Future<void> _openCityPicker() async {
-    // ✅ Close any open keyboard BEFORE opening the sheet
     FocusManager.instance.primaryFocus?.unfocus();
-
     final cityState = ref.read(cityProvider);
     if (cityState.cities.isEmpty && !cityState.isLoading) {
       ref.read(cityProvider.notifier).loadCities();
     }
-
     final selected = await showModalBottomSheet<String>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (_) => const CityPickerSheet(),
     );
-
-    // ✅ Ensure nothing grabs focus after the sheet closes
     FocusManager.instance.primaryFocus?.unfocus();
-
     if (!mounted) return;
-
     if (selected != null && selected.isNotEmpty) {
       setState(() => _cityController.text = selected);
     }
   }
 
-
   @override
   void dispose() {
+    _razorpay.clear();
+    _confettiController.dispose();
+    _audioPlayer.dispose();
     _categoryController.dispose();
     _titleController.dispose();
     _descriptionController.dispose();
@@ -179,19 +209,15 @@ class _SellScreenState extends ConsumerState<SellScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // ✅ Store product state listen — success par action lo
-    ref.listen<StoreProductState>(storeProductProvider, (prev, next) {
-      if (next.isSuccess) {
-        // BottomSheet band karo
+    ref.listen<StoreProductState>(storeProductProvider, (prev, next) async {
+      if (next.isSuccess && next.productId != null) {
         Navigator.of(context).pop();
-
-        // Success Popup
-        showDialog(
-          context: context,
-          barrierDismissible: false,
-          builder: (_) => const ListingSuccessDialog(),
-        );
-
+        await _handlePaymentFlow(next.productId!);
+        ref.read(storeProductProvider.notifier).reset();
+        ref.read(currentProductProvider.notifier).getCurrentUserProducts();
+      } else if (next.isSuccess) {
+        Navigator.of(context).pop();
+        _showSuccessDialog();
         ref.read(storeProductProvider.notifier).reset();
         ref.read(currentProductProvider.notifier).getCurrentUserProducts();
         _clearForm();
@@ -205,7 +231,7 @@ class _SellScreenState extends ConsumerState<SellScreen> {
       }
     });
     return AnnotatedRegion(
-      value: SystemUiOverlayStyle(
+      value: const SystemUiOverlayStyle(
         statusBarColor: Colors.white,
         statusBarIconBrightness: Brightness.light,
         systemNavigationBarIconBrightness: Brightness.light,
@@ -226,110 +252,86 @@ class _SellScreenState extends ConsumerState<SellScreen> {
                 padding: EdgeInsets.symmetric(horizontal: 18.w, vertical: 7.w),
                 child: Consumer(
                   builder: (context, ref, child) {
-                    final currentProductState = ref.watch(
-                      currentProductProvider,
-                    );
+                    final currentProductState = ref.watch(currentProductProvider);
                     final bool isLoading = currentProductState.isLoading;
-                    final products =
-                        currentProductState
-                            .currantProductResponse
-                            ?.currantProductData ??
-                        [];
+                    final products = currentProductState.currantProductResponse?.currantProductData ?? [];
                     return Column(
                       children: [
                         SizedBox(height: 10.h),
-
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Text(
-                              "My Listing  ",
-                              style: AppTextStyle.regular(
-                                size: 18.sp,
-                                color: Colors.black,
-                              ),
-                            ),
+                            Text("My Listing", style: AppTextStyle.regular(size: 18.sp, color: Colors.black)),
                             Visibility(
                               visible: products.isNotEmpty,
                               child: GestureDetector(
-                                onTap: () {
-                                  context.pushNamed(AppRoutes.myListing);
-                                },
+                                onTap: () => context.pushNamed(AppRoutes.myListing),
                                 child: Text(
                                   products.length > 2 ? "View all" : '',
-                                  style: AppTextStyle.regular(
-                                    size: 13.sp,
-                                    color: Colors.green,
-                                  ),
+                                  style: AppTextStyle.regular(size: 13.sp, color: Colors.green),
                                 ),
                               ),
                             ),
                           ],
                         ),
                         SizedBox(height: 12.h),
-                        ListView.builder(
-                          physics: const NeverScrollableScrollPhysics(),
-                          padding: EdgeInsets.zero,
-                          scrollDirection: Axis.vertical,
-                          itemCount: isLoading
-                              ? 2
-                              : products.length > 2
-                              ? 2
-                              : products.length,
-                          shrinkWrap: true,
-                          itemBuilder: (context, index) {
-                            if (isLoading) {
-                              return const MyListingShimmer();
-                            }
-                            final product = products[index];
-                            return MyListing(
-                              onTap: () {
-                                context.pushNamed(
-                                  AppRoutes.productDetail,
-                                  extra: {'productId': product.id},
-                                );
-                                // navigate to product detail
-                              },
-                              imageUrl: product.firstImageUrl,
-                              title: product.title,
-                              rate: product.price.toStringAsFixed(0),
-                              pcs: product.stock.toString(),
-                              moq: product.moq.toString(),
-                              location: product.location ?? '-',
-                              status: product.status,
-                            );
-                          },
-                        ),
+                        if (products.isEmpty && !isLoading)
+                          Container(
+                            width: double.infinity,
+                            padding: EdgeInsets.symmetric(vertical: 24.h),
+                            decoration: BoxDecoration(
+                              color: AppTheme.card.withOpacity(0.3),
+                              borderRadius: BorderRadius.circular(12.r),
+                            ),
+                            child: Column(
+                              children: [
+                                Icon(Icons.inventory_2_outlined, size: 32.sp, color: Colors.grey.shade400),
+                                SizedBox(height: 8.h),
+                                Text(
+                                  "No listings found",
+                                  style: AppTextStyle.medium(size: 13.sp, color: Colors.grey.shade600),
+                                ),
+                              ],
+                            ),
+                          )
+                        else
+                          ListView.builder(
+                            physics: const NeverScrollableScrollPhysics(),
+                            padding: EdgeInsets.zero,
+                            itemCount: isLoading ? 2 : (products.length > 2 ? 2 : products.length),
+                            shrinkWrap: true,
+                            itemBuilder: (context, index) {
+                              if (isLoading) return const MyListingShimmer();
+                              final product = products[index];
+                              return MyListing(
+                                onTap: () {
+                                  context.pushNamed(AppRoutes.productDetail, extra: {'productId': product.id});
+                                },
+                                imageUrl: product.firstImageUrl,
+                                title: product.title,
+                                rate: product.price.toStringAsFixed(0),
+                                pcs: product.stock.toString(),
+                                moq: product.moq.toString(),
+                                location: product.location ?? '-',
+                                status: product.status,
+                              );
+                            },
+                          ),
                         SizedBox(height: 15.h),
-
-                        // ─── Create New Listing ───
                         Align(
                           alignment: Alignment.centerLeft,
-                          child: Text(
-                            "Create New Listing",
-                            style: AppTextStyle.regular(
-                              size: 16.sp,
-                              color: Colors.black,
-                            ),
-                          ),
+                          child: Text("Create New Listing", style: AppTextStyle.regular(size: 16.sp, color: Colors.black)),
                         ),
                         SizedBox(height: 12.h),
                         Container(
-                          decoration: BoxDecoration(
-                            color: AppTheme.card,
-                            borderRadius: BorderRadius.circular(14.r),
-                          ),
+                          decoration: BoxDecoration(color: AppTheme.card, borderRadius: BorderRadius.circular(14.r)),
                           child: Padding(
-                            padding: EdgeInsets.symmetric(
-                              horizontal: 14.w,
-                              vertical: 16.h,
-                            ),
+                            padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 16.h),
                             child: Form(
                               key: mFormKey,
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  // Category Dropdown
                                   ValueListenableBuilder<bool>(
                                     valueListenable: _isDropdownOpen,
                                     builder: (context, isOpen, child) {
@@ -338,184 +340,83 @@ class _SellScreenState extends ConsumerState<SellScreen> {
                                             CrossAxisAlignment.stretch,
                                         children: [
                                           GestureDetector(
-                                            onTap: () {
-                                              _isDropdownOpen.value =
-                                                  !_isDropdownOpen.value;
-                                            },
+                                            onTap: () => _isDropdownOpen.value = !_isDropdownOpen.value,
                                             child: AbsorbPointer(
                                               child: TextFormField(
                                                 controller: _categoryController,
                                                 readOnly: true,
-                                                style: TextStyle(
-                                                  fontSize: 14.sp,
-                                                  color: Colors.black,
-                                                ),
-                                                validator: (value) {
-                                                  if (value == null ||
-                                                      value.isEmpty) {
-                                                    return 'Select category!';
-                                                  }
-                                                  return null;
-                                                },
+                                                style: TextStyle(fontSize: 14.sp, color: Colors.black),
+                                                validator: (value) => (value == null || value.isEmpty) ? 'Select category!' : null,
                                                 decoration: _inputDecoration(
                                                   hintText: 'Select Category',
                                                   suffixIcon: Icon(
-                                                    isOpen
-                                                        ? Icons
-                                                              .keyboard_arrow_up_rounded
-                                                        : Icons
-                                                              .keyboard_arrow_down_rounded,
-                                                    color: Colors.black54,
-                                                    size: 24.sp,
+                                                    isOpen ? Icons.keyboard_arrow_up_rounded : Icons.keyboard_arrow_down_rounded,
+                                                    color: Colors.black54, size: 24.sp,
                                                   ),
                                                 ),
                                               ),
                                             ),
                                           ),
-
                                           if (isOpen)
                                             Container(
                                               margin: EdgeInsets.only(top: 6.h),
                                               height: 200.h,
                                               decoration: BoxDecoration(
                                                 color: Colors.white,
-                                                borderRadius:
-                                                    BorderRadius.circular(10.r),
-                                                border: Border.all(
-                                                  color: Colors.grey.shade300,
-                                                ),
-                                                boxShadow: [
-                                                  BoxShadow(
-                                                    color: Colors.black12,
-                                                    blurRadius: 4,
-                                                    offset: const Offset(0, 2),
-                                                  ),
-                                                ],
+                                                borderRadius: BorderRadius.circular(10.r),
+                                                border: Border.all(color: Colors.grey.shade300),
+                                                boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 4, offset: Offset(0, 2))],
                                               ),
-                                              child:
-                                                  ValueListenableBuilder<
-                                                    List<Map<String, dynamic>>
-                                                  >(
-                                                    valueListenable: dataString,
-                                                    builder: (context, list, child) {
-                                                      return ListView.separated(
-                                                        padding:
-                                                            EdgeInsets.zero,
-                                                        shrinkWrap: true,
-                                                        itemCount: list.length,
-                                                        separatorBuilder:
-                                                            (context, idx) =>
-                                                                Divider(
-                                                                  height: 1,
-                                                                  color: Colors
-                                                                      .grey
-                                                                      .shade100,
-                                                                ),
-                                                        itemBuilder: (context, i) {
-                                                          final isSelected =
-                                                              list[i]['selected']
-                                                                  as bool;
-                                                          return ListTile(
-                                                            dense: true,
-                                                            title: Text(
-                                                              list[i]['name'] ??
-                                                                  '',
-                                                              style: TextStyle(
-                                                                fontSize:
-                                                                    13.5.sp,
-                                                                fontWeight:
-                                                                    isSelected
-                                                                    ? FontWeight
-                                                                          .bold
-                                                                    : FontWeight
-                                                                          .normal,
-                                                                color:
-                                                                    isSelected
-                                                                    ? AppTheme
-                                                                          .primary
-                                                                    : Colors
-                                                                          .black87,
-                                                              ),
-                                                            ),
-                                                            trailing: isSelected
-                                                                ? const Icon(
-                                                                    Icons
-                                                                        .check_circle,
-                                                                    color: AppTheme
-                                                                        .primary,
-                                                                  )
-                                                                : null,
-                                                            onTap: () =>
-                                                                _selectItem(i),
-                                                          );
-                                                        },
+                                              child: ValueListenableBuilder<List<Map<String, dynamic>>>(
+                                                valueListenable: dataString,
+                                                builder: (context, list, child) {
+                                                  return ListView.separated(
+                                                    padding: EdgeInsets.zero,
+                                                    shrinkWrap: true,
+                                                    itemCount: list.length,
+                                                    separatorBuilder: (context, idx) => Divider(height: 1, color: Colors.grey.shade100),
+                                                    itemBuilder: (context, i) {
+                                                      final isSelected = list[i]['selected'] as bool;
+                                                      return ListTile(
+                                                        dense: true,
+                                                        title: Text(list[i]['name'] ?? '', style: TextStyle(fontSize: 13.5.sp, fontWeight: isSelected ? FontWeight.bold : FontWeight.normal, color: isSelected ? AppTheme.primary : Colors.black87)),
+                                                        trailing: isSelected ? const Icon(Icons.check_circle, color: AppTheme.primary) : null,
+                                                        onTap: () => _selectItem(i),
                                                       );
                                                     },
-                                                  ),
+                                                  );
+                                                },
+                                              ),
                                             ),
                                         ],
                                       );
                                     },
                                   ),
-
                                   SizedBox(height: 12.h),
-
-                                  // Product Title textfield
                                   TextFormField(
                                     controller: _titleController,
-                                    style: TextStyle(
-                                      fontSize: 14.sp,
-                                      color: Colors.black,
-                                    ),
-                                    validator: (value) {
-                                      if (value == null ||
-                                          value.trim().isEmpty) {
-                                        return 'Enter product title';
-                                      }
-                                      return null;
-                                    },
-                                    decoration: _inputDecoration(
-                                      hintText: 'Product Title',
-                                    ),
+                                    style: TextStyle(fontSize: 14.sp, color: Colors.black),
+                                    validator: (value) => (value == null || value.trim().isEmpty) ? 'Enter product title' : null,
+                                    decoration: _inputDecoration(hintText: 'Product Title'),
                                   ),
-
                                   SizedBox(height: 12.h),
-
-                                  // Description textfield (Optional)
                                   TextFormField(
                                     controller: _descriptionController,
                                     maxLines: 3,
-                                    style: TextStyle(
-                                      fontSize: 14.sp,
-                                      color: Colors.black,
-                                    ),
-                                    decoration: _inputDecoration(
-                                      hintText: 'Description',
-                                    ),
+                                    style: TextStyle(fontSize: 14.sp, color: Colors.black),
+                                    decoration: _inputDecoration(hintText: 'Description'),
                                   ),
-
                                   SizedBox(height: 12.h),
-
-                                  // Quantity & MOQ row
                                   Row(
                                     children: [
                                       Expanded(
                                         child: TextFormField(
                                           controller: _pcsController,
                                           keyboardType: TextInputType.number,
-                                          inputFormatters: [
-                                            FilteringTextInputFormatter
-                                                .digitsOnly,
-                                          ],
+                                          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                                           style: TextStyle(fontSize: 14.sp),
-                                          validator: (value) {
-                                            if (value == null || value.isEmpty)
-                                              return 'Enter quantity';
-                                            return null;
-                                          },
-                                          decoration: _inputDecoration(
-                                            hintText: 'Total Quantity',
-                                          ),
+                                          validator: (value) => (value == null || value.isEmpty) ? 'Enter quantity' : null,
+                                          decoration: _inputDecoration(hintText: 'Total Quantity'),
                                         ),
                                       ),
                                       SizedBox(width: 10.w),
@@ -523,41 +424,21 @@ class _SellScreenState extends ConsumerState<SellScreen> {
                                         child: TextFormField(
                                           controller: _moqController,
                                           keyboardType: TextInputType.number,
-                                          inputFormatters: [
-                                            FilteringTextInputFormatter
-                                                .digitsOnly,
-                                          ],
+                                          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                                           style: TextStyle(fontSize: 14.sp),
                                           validator: (value) {
-                                            if (value == null ||
-                                                value.isEmpty) {
-                                              return 'Enter MOQ';
-                                            }
-                                            final int moq =
-                                                int.tryParse(value) ?? 0;
-                                            final int totalQty =
-                                                int.tryParse(
-                                                  _pcsController.text,
-                                                ) ??
-                                                0;
-
-                                            if (moq > totalQty) {
-                                              return 'MOQ cannot be greater than Total Quantity';
-                                            }
-
+                                            if (value == null || value.isEmpty) return 'Enter MOQ';
+                                            final int moq = int.tryParse(value) ?? 0;
+                                            final int totalQty = int.tryParse(_pcsController.text) ?? 0;
+                                            if (moq > totalQty) return 'MOQ error';
                                             return null;
                                           },
-                                          decoration: _inputDecoration(
-                                            hintText: 'MOQ',
-                                          ),
+                                          decoration: _inputDecoration(hintText: 'MOQ'),
                                         ),
                                       ),
                                     ],
                                   ),
-
                                   SizedBox(height: 12.h),
-
-                                  // Location & Price row
                                   Row(
                                     children: [
                                       Expanded(
@@ -565,20 +446,11 @@ class _SellScreenState extends ConsumerState<SellScreen> {
                                           onTap: _openCityPicker,
                                           child: AbsorbPointer(
                                             child: TextFormField(
-                                              focusNode: FocusNode(
-                                                canRequestFocus: false,
-                                              ),
+                                              focusNode: FocusNode(canRequestFocus: false),
                                               controller: _cityController,
                                               style: TextStyle(fontSize: 14.sp),
-                                              validator: (value) {
-                                                if (value == null ||
-                                                    value.trim().isEmpty)
-                                                  return 'Enter city';
-                                                return null;
-                                              },
-                                              decoration: _inputDecoration(
-                                                hintText: 'Location (city)',
-                                              ),
+                                              validator: (value) => (value == null || value.trim().isEmpty) ? 'Enter city' : null,
+                                              decoration: _inputDecoration(hintText: 'Location (city)'),
                                             ),
                                           ),
                                         ),
@@ -588,133 +460,61 @@ class _SellScreenState extends ConsumerState<SellScreen> {
                                         child: TextFormField(
                                           controller: _priceController,
                                           keyboardType: TextInputType.number,
-                                          inputFormatters: [
-                                            FilteringTextInputFormatter
-                                                .digitsOnly,
-                                          ],
+                                          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                                           style: TextStyle(fontSize: 14.sp),
-                                          validator: (value) {
-                                            if (value == null || value.isEmpty)
-                                              return 'Enter price';
-                                            return null;
-                                          },
-                                          decoration: _inputDecoration(
-                                            hintText: 'Price per PCS',
-                                          ),
+                                          validator: (value) => (value == null || value.isEmpty) ? 'Enter price' : null,
+                                          decoration: _inputDecoration(hintText: 'Price per PCS'),
                                         ),
                                       ),
                                     ],
                                   ),
-
                                   SizedBox(height: 12.h),
-
-                                  // Mobile Number Input Field (styled exactly like the image)
                                   TextFormField(
                                     controller: _phoneController,
                                     keyboardType: TextInputType.phone,
                                     maxLength: 10,
-                                    inputFormatters: [
-                                      FilteringTextInputFormatter.digitsOnly,
-                                    ],
-                                    style: TextStyle(
-                                      fontSize: 14.sp,
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                    validator: (value) {
-                                      if (value == null || value.length < 12) {
-                                        return 'Enter valid 10-digit mobile';
-                                      }
-                                      return null;
-                                    },
-                                    decoration: _inputDecoration(
-                                      hintText: '91 90811 81218',
-                                    ).copyWith(counterText: ''),
+                                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                                    style: TextStyle(fontSize: 14.sp, fontWeight: FontWeight.w500),
+                                    validator: (value) => (value == null || value.length < 10) ? 'Enter valid mobile' : null,
+                                    decoration: _inputDecoration(hintText: '90811 81218').copyWith(counterText: ''),
                                   ),
-
                                   SizedBox(height: 16.h),
-
-                                  // Upload banner block (with soft yellow background Color(0xFFF8E7BE))
                                   GestureDetector(
                                     onTap: _pickImages,
                                     child: Container(
                                       width: double.infinity,
-                                      padding: EdgeInsets.symmetric(
-                                        horizontal: 16.w,
-                                        vertical: 14.h,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: Color(0xFFF8E7BE),
-                                        borderRadius: BorderRadius.circular(
-                                          12.r,
-                                        ),
-                                      ),
+                                      padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 14.h),
+                                      decoration: BoxDecoration(color: const Color(0xFFF8E7BE), borderRadius: BorderRadius.circular(12.r)),
                                       child: Row(
                                         children: [
                                           Column(
                                             crossAxisAlignment:
                                                 CrossAxisAlignment.start,
                                             children: [
-                                              Text(
-                                                "Upload Product photos",
-                                                style: TextStyle(
-                                                  fontSize: 14.sp,
-                                                  fontWeight: FontWeight.bold,
-                                                  color: const Color(
-                                                    0xFF1E1E1E,
-                                                  ),
-                                                ),
-                                              ),
+                                              Text("Upload Product photos", style: TextStyle(fontSize: 14.sp, fontWeight: FontWeight.bold, color: const Color(0xFF1E1E1E))),
                                               SizedBox(height: 3.h),
-                                              Text(
-                                                imagePaths.isNotEmpty
-                                                    ? "${imagePaths.length} photos selected"
-                                                    : "Upto 20 photos",
-                                                style: TextStyle(
-                                                  fontSize: 11.sp,
-                                                  color: Colors.black54,
-                                                ),
-                                              ),
+                                              Text(imagePaths.isNotEmpty ? "${imagePaths.length} photos selected" : "Upto 20 photos", style: TextStyle(fontSize: 11.sp, color: Colors.black54)),
                                             ],
                                           ),
                                           const Spacer(),
-                                          Icon(
-                                            Icons.image_outlined,
-                                            size: 28.sp,
-                                            color: Colors.black87,
-                                          ),
+                                          Icon(Icons.image_outlined, size: 28.sp, color: Colors.black87),
                                         ],
                                       ),
                                     ),
                                   ),
-
                                   SizedBox(height: 20.h),
-
                                   PremiumLoadingButton(
                                     isLoading: false,
                                     onTap: () async {
-                                      FocusManager.instance.primaryFocus
-                                          ?.unfocus();
-                                      await Future.delayed(
-                                        const Duration(milliseconds: 100),
-                                      );
-                                      // setProductData();
+                                      FocusManager.instance.primaryFocus?.unfocus();
+                                      await Future.delayed(const Duration(milliseconds: 100));
                                       if (mFormKey.currentState!.validate()) {
                                         if (imagePaths.isNotEmpty) {
-                                          NavBarController.showNavBar.value =
-                                              false;
+                                          NavBarController.showNavBar.value = false;
                                           await _openBottomSheet();
-                                          NavBarController.showNavBar.value =
-                                              true;
+                                          NavBarController.showNavBar.value = true;
                                         } else {
-                                          ScaffoldMessenger.of(
-                                            context,
-                                          ).showSnackBar(
-                                            const SnackBar(
-                                              content: Text(
-                                                'Please select images.',
-                                              ),
-                                            ),
-                                          );
+                                          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please select images.')));
                                         }
                                       }
                                     },
@@ -737,6 +537,68 @@ class _SellScreenState extends ConsumerState<SellScreen> {
     );
   }
 
+  void _showSuccessDialog() {
+    showDialog(context: context, barrierDismissible: false, builder: (_) => const ListingSuccessDialog());
+  }
+
+  Future<void> _validateCoupon() async {
+    final code = _applyCouponController.text.trim();
+    if (code.isEmpty) return;
+    setState(() { _isCouponValidating = true; });
+    try {
+      final repo = ref.read(repositoryProvider);
+      final baseAmount = double.tryParse(SharedPrefs().getString(listingAmount) ?? '33.0') ?? 33.0;
+      final result = await repo.validateCoupon(code: code, orderAmount: baseAmount);
+      setState(() {
+        _couponResult = result;
+        _finalAmount = (result['finalAmount'] as num).toDouble();
+        _isCouponValidating = false;
+      });
+      _confettiController.play();
+      _audioPlayer.play(AssetSource('tone.mp3'));
+    } catch (e) {
+      setState(() { _isCouponValidating = false; _couponResult = null; _finalAmount = double.tryParse(SharedPrefs().getString(listingAmount) ?? '33.0') ?? 33.0; });
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString().replaceAll('Exception:', '')), backgroundColor: Colors.red));
+    }
+  }
+
+  void _removeCoupon() {
+    setState(() {
+      _couponResult = null;
+      _applyCouponController.clear();
+      _finalAmount = double.tryParse(SharedPrefs().getString(listingAmount) ?? '33.0') ?? 33.0;
+    });
+  }
+
+  Future<void> _handlePaymentFlow(String productId) async {
+    _currentProductId = productId;
+    final String userIdValue = SharedPrefs().getString(userId) ?? '';
+    final String userPhone = SharedPrefs().getString(phoneNumber) ?? '';
+    final String rzpKey = SharedPrefs().getString(razorpayKey) ?? 'rzp_test_T8wMbzaBD7SRid';
+
+    if (_finalAmount == 0) {
+      await ref.read(storeProductProvider.notifier).updatePaymentStatus(productId: productId, userId: userIdValue, paymentStatus: 'paid');
+      _showSuccessDialog();
+      _clearForm();
+      return;
+    }
+    var options = {
+      'key': rzpKey,
+      'amount': (_finalAmount * 100).toInt(),
+      'name': 'LootBazar',
+      'description': 'Product Listing Fee',
+      'prefill': {'contact': userPhone, 'email': ''},
+      'external': {'wallets': ['paytm']},
+      'notes': {'productId': productId, 'userId': userIdValue}
+    };
+    try {
+      if (!kIsWeb) {
+        await Workmanager().registerOneOffTask("payment_status_$productId", "updatePaymentStatusTask", inputData: {'productId': productId, 'userId': userIdValue}, initialDelay: const Duration(minutes: 5), constraints: Constraints(networkType: NetworkType.connected));
+      }
+      _razorpay.open(options);
+    } catch (e) { debugPrint("Razorpay Error: $e"); }
+  }
+
   void _clearForm() {
     _titleController.clear();
     _descriptionController.clear();
@@ -746,66 +608,24 @@ class _SellScreenState extends ConsumerState<SellScreen> {
     _cityController.clear();
     _phoneController.clear();
     _categoryController.clear();
+    _applyCouponController.clear();
     setState(() {
       imagePaths = [];
       selectedImages = [];
+      _couponResult = null;
+      _finalAmount = double.tryParse(SharedPrefs().getString(listingAmount) ?? '33.0') ?? 33.0;
     });
-    // categories deselect karo
-    final reset = dataString.value
-        .map((e) => {...e, 'selected': false})
-        .toList();
+    final reset = dataString.value.map((e) => {...e, 'selected': false}).toList();
     dataString.value = reset;
   }
 
   Future<void> _callStoreProductApi() async {
-    // Phone number ke aage 91 lagao
     final phone = '91${_phoneController.text.trim()}';
-
-    await ref
-        .read(storeProductProvider.notifier)
-        .storeProduct(
-          title: _titleController.text.trim(),
-          description: _descriptionController.text.trim(),
-          price: double.parse(_priceController.text.trim()),
-          stock: int.parse(_pcsController.text.trim()),
-          moq: int.parse(_moqController.text.trim()),
-          categoryIds: _selectedCategoryIds,
-          userId: SharedPrefs().getString(userId) ?? '',
-          phoneNumber: phone,
-          location: _cityController.text.trim(),
-          imagePaths: selectedImages,
-        );
+    await ref.read(storeProductProvider.notifier).storeProduct(title: _titleController.text.trim(), description: _descriptionController.text.trim(), price: double.parse(_priceController.text.trim()), stock: int.parse(_pcsController.text.trim()), moq: int.parse(_moqController.text.trim()), categoryIds: _selectedCategoryIds, userId: SharedPrefs().getString(userId) ?? '', phoneNumber: phone, location: _cityController.text.trim(), imagePaths: selectedImages);
   }
 
-  InputDecoration _inputDecoration({
-    required String hintText,
-    Widget? suffixIcon,
-  }) {
-    return InputDecoration(
-      filled: true,
-      fillColor: Colors.white,
-      hintText: hintText,
-      hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 13.5.sp),
-      suffixIcon: suffixIcon,
-      isDense: true,
-      contentPadding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 12.h),
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(10.r),
-        borderSide: BorderSide.none,
-      ),
-      enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(10.r),
-        borderSide: BorderSide.none,
-      ),
-      focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(10.r),
-        borderSide: const BorderSide(color: Color(0xFFFF5216), width: 1.5),
-      ),
-      errorBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(10.r),
-        borderSide: const BorderSide(color: Colors.red, width: 1),
-      ),
-    );
+  InputDecoration _inputDecoration({required String hintText, Widget? suffixIcon}) {
+    return InputDecoration(filled: true, fillColor: Colors.white, hintText: hintText, hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 13.5.sp), suffixIcon: suffixIcon, isDense: true, contentPadding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 12.h), border: OutlineInputBorder(borderRadius: BorderRadius.circular(10.r), borderSide: BorderSide.none), enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10.r), borderSide: BorderSide.none), focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10.r), borderSide: const BorderSide(color: Color(0xFFFF5216), width: 1.5)), errorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10.r), borderSide: const BorderSide(color: Colors.red, width: 1)));
   }
 
   Future<void> _openBottomSheet() async {
@@ -813,266 +633,232 @@ class _SellScreenState extends ConsumerState<SellScreen> {
       showDragHandle: true,
       backgroundColor: AppTheme.card,
       isScrollControlled: true,
-      constraints: BoxConstraints(
-        maxHeight: MediaQuery.of(context).size.height * 0.8,
-      ),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10.0)),
+      constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.85),
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       context: context,
       builder: (BuildContext sheetContext) {
-        return Consumer(
-          builder: (context, ref, child) {
-            final storeState = ref.watch(storeProductProvider);
-            final bool isApiLoading = storeState.isLoading;
+        return StatefulBuilder(
+          builder: (context, setSheetState) {
+            return Consumer(
+              builder: (context, ref, child) {
+                final storeState = ref.watch(storeProductProvider);
+                final bool isApiLoading = storeState.isLoading;
+                final baseAmount = double.tryParse(SharedPrefs().getString(listingAmount) ?? '33.0') ?? 33.0;
 
-            return Stack(
-              children: [
-                // ─── Main BottomSheet Content ───
-                SingleChildScrollView(
-                  child: Padding(
-                    padding: EdgeInsets.only(
-                      left: 16.w,
-                      right: 16.w,
-                      top: 20,
-                      bottom: MediaQuery.of(context).viewInsets.bottom + 180,
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Image Preview Grid
-                        SizedBox(
-                          height: 200,
-                          child: GridView.builder(
-                            shrinkWrap: true,
-                            scrollDirection: Axis.horizontal,
-                            gridDelegate:
-                                const SliverGridDelegateWithFixedCrossAxisCount(
-                                  crossAxisCount: 2,
-                                  crossAxisSpacing: 8.0,
-                                  mainAxisSpacing: 8.0,
-                                  childAspectRatio: 1.0,
-                                ),
-                            itemCount: selectedImages.length,
-                            itemBuilder: (context, index) {
-                              final image = selectedImages[index];
-                              return ClipRRect(
-                                borderRadius: BorderRadius.all(
-                                  Radius.circular(10.r),
-                                ),
-                                child: kIsWeb
-                                    ? Image.network(
-                                        image.path,
-                                        fit: BoxFit.cover,
-                                      )
-                                    : Image.file(
-                                        File(image.path),
-                                        fit: BoxFit.cover,
-                                      ),
-                              );
-                            },
-                          ),
-                        ),
-                        SizedBox(height: 16.h),
-
-                        // Description
-                        Text(
-                          _titleController.text,
-                          style: AppTextStyle.bold(
-                            size: 18.sp,
-                            color: Colors.black,
-                          ),
-                        ),
-                        SizedBox(height: 8.h),
-                        Text(
-                          _descriptionController.text,
-                          style: AppTextStyle.regular(
-                            color: Colors.grey,
-                            size: 14.sp,
-                          ),
-                        ),
-                        SizedBox(height: 24.h),
-
-                        // Stats Row
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceAround,
+                return Stack(
+                  children: [
+                    SingleChildScrollView(
+                      child: Padding(
+                        padding: EdgeInsets.only(left: 16.w, right: 16.w, top: 10, bottom: MediaQuery.of(context).viewInsets.bottom + 220),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            _statColumn('₹ ${_priceController.text}', 'Rate'),
-                            _statColumn(_pcsController.text, 'Pcs'),
-                            _statColumn(_moqController.text, 'MOQ'),
-                            _statColumn(_cityController.text, 'Location'),
-                          ],
-                        ),
-                        SizedBox(height: 16.h),
-
-                        // Category
-                        Text(
-                          'Category: ${_categoryController.text}',
-                          style: AppTextStyle.regular(
-                            size: 13.sp,
-                            color: Colors.grey,
-                          ),
-                        ),
-                        SizedBox(height: 32.h),
-
-                        // Edit Button
-                        MainButton(
-                          onTap: () => Navigator.pop(context),
-                          text: 'Edit',
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-
-                // ─── Bottom Payment Bar ───
-                Positioned(
-                  bottom: 0,
-                  left: 0,
-                  right: 0,
-                  child: Container(
-                    padding: EdgeInsets.symmetric(
-                      vertical: 16.h,
-                      horizontal: 11.w,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.only(
-                        topLeft: Radius.circular(16.0.r),
-                        topRight: Radius.circular(16.0.r),
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.grey.withOpacity(0.2),
-                          spreadRadius: 1,
-                          blurRadius: 5,
-                        ),
-                      ],
-                    ),
-                    child: Column(
-                      children: [
-                        // Google Pay row
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Row(
-                              children: [
-                                Container(
-                                  height: 35,
-                                  width: 35,
-                                  padding: const EdgeInsets.all(5),
-                                  decoration: BoxDecoration(
-                                    color: Colors.grey.shade300,
-                                    borderRadius: BorderRadius.all(
-                                      Radius.circular(5.r),
+                            SizedBox(
+                              height: 180.h,
+                              child: GridView.builder(
+                                shrinkWrap: true,
+                                scrollDirection: Axis.horizontal,
+                                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 2, crossAxisSpacing: 8, mainAxisSpacing: 8, childAspectRatio: 1.0),
+                                itemCount: selectedImages.length,
+                                itemBuilder: (context, index) {
+                                  final image = selectedImages[index];
+                                  return ClipRRect(borderRadius: BorderRadius.circular(10.r), child: kIsWeb ? Image.network(image.path, fit: BoxFit.cover) : Image.file(File(image.path), fit: BoxFit.cover));
+                                },
+                              ),
+                            ),
+                            SizedBox(height: 20.h),
+                            Text(_titleController.text, style: AppTextStyle.bold(size: 18.sp)),
+                            SizedBox(height: 6.h),
+                            Text(_descriptionController.text, style: AppTextStyle.regular(color: Colors.grey, size: 13.sp), maxLines: 2),
+                            SizedBox(height: 20.h),
+                            Container(
+                              padding: EdgeInsets.all(16.w),
+                              decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(15.r)),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                                children: [
+                                  _statColumn('₹ ${_priceController.text}', 'Rate'),
+                                  _statColumn(_pcsController.text, 'Pcs'),
+                                  _statColumn(_moqController.text, 'MOQ'),
+                                  _statColumn(_cityController.text, 'City'),
+                                ],
+                              ),
+                            ),
+                            SizedBox(height: 20.h),
+                            
+                            // Advanced Coupon UI
+                            AnimatedSwitcher(
+                              duration: const Duration(milliseconds: 400),
+                              child: _couponResult == null 
+                                ? Container(
+                                    key: const ValueKey('coupon_input'),
+                                    padding: EdgeInsets.all(16.w),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white,
+                                      borderRadius: BorderRadius.circular(15.r),
+                                      border: Border.all(color: AppTheme.primary.withOpacity(0.1)),
+                                    ),
+                                    child: Column(
+                                      children: [
+                                        Row(
+                                          children: [
+                                            Icon(Icons.local_offer_outlined, color: AppTheme.primary, size: 20.sp),
+                                            SizedBox(width: 10.w),
+                                            Text("Apply Coupon", style: AppTextStyle.bold(size: 14.sp)),
+                                          ],
+                                        ),
+                                        SizedBox(height: 12.h),
+                                        Row(
+                                          children: [
+                                            Expanded(
+                                              child: TextField(
+                                                controller: _applyCouponController,
+                                                textCapitalization: TextCapitalization.characters,
+                                                decoration: InputDecoration(
+                                                  hintText: "Enter Code",
+                                                  isDense: true,
+                                                  fillColor: Colors.grey.shade50,
+                                                  filled: true,
+                                                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10.r), borderSide: BorderSide.none),
+                                                ),
+                                              ),
+                                            ),
+                                            SizedBox(width: 10.w),
+                                            SizedBox(
+                                              width: 90.w,
+                                              height: 44.h,
+                                              child: ElevatedButton(
+                                                onPressed: _isCouponValidating ? null : () async {
+                                                  await _validateCoupon();
+                                                  setSheetState(() {}); 
+                                                },
+                                                style: ElevatedButton.styleFrom(backgroundColor: AppTheme.primary, foregroundColor: Colors.white, elevation: 0, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10.r))),
+                                                child: _isCouponValidating 
+                                                  ? SizedBox(width: 18.w, height: 18.w, child: const CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white)) 
+                                                  : Text("Apply", style: AppTextStyle.bold(size: 13.sp)),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ],
+                                    ),
+                                  )
+                                : Container(
+                                    key: const ValueKey('coupon_applied'),
+                                    padding: EdgeInsets.all(16.w),
+                                    decoration: BoxDecoration(
+                                      color: Colors.green.shade50,
+                                      borderRadius: BorderRadius.circular(15.r),
+                                      border: Border.all(color: Colors.green.withOpacity(0.3)),
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        Container(
+                                          padding: EdgeInsets.all(8.w),
+                                          decoration: BoxDecoration(color: Colors.green.withOpacity(0.1), shape: BoxShape.circle),
+                                          child: Icon(Icons.check_circle_rounded, color: Colors.green, size: 22.sp),
+                                        ),
+                                        SizedBox(width: 12.w),
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              Text("'${_applyCouponController.text}' Applied", style: AppTextStyle.bold(size: 14.sp, color: Colors.green.shade800)),
+                                              Text(_couponResult!['message'] ?? 'Discount applied successfully', style: AppTextStyle.regular(size: 11.sp, color: Colors.green.shade700)),
+                                            ],
+                                          ),
+                                        ),
+                                        TextButton(
+                                          onPressed: () {
+                                            _removeCoupon();
+                                            setSheetState(() {});
+                                          },
+                                          child: Text("Remove", style: AppTextStyle.bold(size: 13.sp, color: Colors.red)),
+                                        ),
+                                      ],
                                     ),
                                   ),
-                                  child: Image.asset(
-                                    'assets/images/pay.png',
-                                    fit: BoxFit.cover,
-                                  ),
-                                ),
-                                SizedBox(width: 11.w),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+
+                    // Advanced Payment Bar
+                    Positioned(
+                      bottom: 0, left: 0, right: 0,
+                      child: Container(
+                        padding: EdgeInsets.fromLTRB(16.w, 16.h, 16.w, MediaQuery.of(context).padding.bottom + 16.h),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.vertical(top: Radius.circular(25.r)),
+                          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.08), blurRadius: 15, offset: const Offset(0, -5))],
+                        ),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
                                 Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Text(
-                                      'Pay using',
-                                      style: AppTextStyle.regular(size: 12.sp),
-                                    ),
-                                    Text(
-                                      'Google Pay',
-                                      style: AppTextStyle.bold(size: 16.sp),
+                                    Text("Payment Total", style: AppTextStyle.regular(size: 12.sp, color: Colors.grey)),
+                                    Row(
+                                      children: [
+                                        Text("₹$baseAmount", style: TextStyle(decoration: _couponResult != null ? TextDecoration.lineThrough : null, fontSize: 14.sp, color: Colors.grey)),
+                                        if (_couponResult != null) ...[
+                                          SizedBox(width: 8.w),
+                                          Text("₹$_finalAmount", style: AppTextStyle.bold(size: 18.sp, color: Colors.black)),
+                                        ]
+                                      ],
                                     ),
                                   ],
                                 ),
+                                Container(
+                                  padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
+                                  decoration: BoxDecoration(color: Colors.blue.withOpacity(0.1), borderRadius: BorderRadius.circular(10.r)),
+                                  child: Row(
+                                    children: [
+                                      Icon(Icons.verified_user_outlined, size: 20.sp, color: Colors.blue.shade800),
+                                      SizedBox(width: 8.w),
+                                      Text("Secure Pay", style: AppTextStyle.bold(size: 13.sp, color: Colors.blue.shade800)),
+                                    ],
+                                  ),
+                                ),
                               ],
                             ),
-                            ValueListenableBuilder<bool>(
-                              valueListenable: _isChecked,
-                              builder: (context, isChecked, child) {
-                                return Row(
-                                  children: [
-                                    Checkbox(
-                                      value: isChecked,
-                                      activeColor: AppTheme.primary,
-                                      onChanged: (value) {
-                                        _isChecked.value = value ?? false;
-                                      },
-                                    ),
-                                    Text(
-                                      'Apply Coupon',
-                                      style: AppTextStyle.bold(size: 12.sp),
-                                    ),
-                                  ],
-                                );
+                            SizedBox(height: 20.h),
+                            SwipeButton(
+                              isChecked: _isChecked.value,
+                              status: paymentStatus,
+                              isApiLoading: isApiLoading,
+                              amount: _finalAmount,
+                              onCall: () async {
+                                FocusScope.of(context).unfocus();
+                                await _callStoreProductApi();
                               },
                             ),
                           ],
                         ),
-
-                        // Coupon field
-                        ValueListenableBuilder<bool>(
-                          valueListenable: _isChecked,
-                          builder: (context, isChecked, child) {
-                            return AnimatedSwitcher(
-                              duration: const Duration(milliseconds: 300),
-                              child: isChecked
-                                  ? Padding(
-                                      key: const ValueKey('coupon'),
-                                      padding: EdgeInsets.only(top: 12.h),
-                                      child: Row(
-                                        children: [
-                                          Expanded(
-                                            child: TextFormField(
-                                              controller:
-                                                  _applyCouponController,
-                                              textCapitalization:
-                                                  TextCapitalization.characters,
-                                              decoration: InputDecoration(
-                                                labelText: 'Apply Coupon',
-                                                hintText: 'Enter coupon code',
-                                                border: OutlineInputBorder(
-                                                  borderRadius:
-                                                      BorderRadius.circular(
-                                                        10.r,
-                                                      ),
-                                                ),
-                                              ),
-                                            ),
-                                          ),
-                                          SizedBox(width: 7.w),
-                                          ApplyButtons(
-                                            onTap: () async {},
-                                            text: 'Apply',
-                                          ),
-                                        ],
-                                      ),
-                                    )
-                                  : const SizedBox.shrink(
-                                      key: ValueKey('empty'),
-                                    ),
-                            );
-                          },
-                        ),
-
-                        SizedBox(height: 16.h),
-
-                        // ✅ SwipeButton
-                        SwipeButton(
-                          isChecked: _isChecked.value,
-                          status: paymentStatus,
-                          isApiLoading: isApiLoading,
-                          onCall: () async {
-                            FocusScope.of(context).unfocus();
-                            await _callStoreProductApi();
-                          },
-                        ),
-                      ],
+                      ),
                     ),
-                  ),
-                ),
-              ],
+                    
+                    Positioned.fill(
+                      child: IgnorePointer(
+                        child: ConfettiWidget(
+                          confettiController: _confettiController,
+                          blastDirectionality: BlastDirectionality.explosive,
+                          shouldLoop: false,
+                          colors: const [Colors.green, Colors.blue, Colors.pink, Colors.orange, Colors.purple],
+                        ),
+                      ),
+                    ),
+                  ],
+                );
+              }
             );
-          },
+          }
         );
       },
     );
@@ -1081,14 +867,8 @@ class _SellScreenState extends ConsumerState<SellScreen> {
   Widget _statColumn(String value, String label) {
     return Column(
       children: [
-        Text(
-          value,
-          style: AppTextStyle.bold(size: 16.sp, color: Colors.black),
-        ),
-        Text(
-          label,
-          style: AppTextStyle.regular(size: 12.sp, color: Colors.black),
-        ),
+        Text(value, style: AppTextStyle.bold(size: 16.sp, color: Colors.black)),
+        Text(label, style: AppTextStyle.regular(size: 12.sp, color: Colors.grey)),
       ],
     );
   }

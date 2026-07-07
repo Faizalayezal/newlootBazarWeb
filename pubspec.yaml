@@ -63,8 +63,12 @@ dependencies:
   image_picker:
 
   fluttertoast:
+  workmanager:
+  razorpay_flutter:
+  confetti:
+  audioplayers: ^6.1.0
+  url_launcher: ^6.1.11
 
-  flutter_story_presenter: 1.0.7
 
 
 
@@ -72,6 +76,7 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
 
+  flutter_launcher_icons: ^0.13.1
   # The "flutter_lints" package below contains a set of recommended lints to
   # encourage good coding practices. The lint set provided by the package is
   # activated in the `analysis_options.yaml` file located at the root of your
@@ -124,5 +129,16 @@ flutter:
         - asset: assets/font/regular.otf
           weight: 400
 
-  # For details regarding font from package dependencies,
-  # see https://flutter.dev/to/font-from-package
+# For details regarding font from package dependencies,
+# see https://flutter.dev/to/font-from-package
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/applogo.png"
+  web:
+    generate: true
+    image_path: "assets/applogo.png"
+    background_color: "#FFFFFF"
+    theme_color: "#FF5500"
+

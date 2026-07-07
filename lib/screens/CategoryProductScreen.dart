@@ -8,8 +8,10 @@ import 'package:lootbazarweb/core/theme.dart';
 import 'package:lootbazarweb/providerd/Products/ProductState.dart';
 import 'package:lootbazarweb/providerd/category/CategoryViseProductNotifier.dart';
 import 'package:lootbazarweb/route/AppRoutes.dart';
+import 'package:lootbazarweb/shared/AppTextStyle.dart';
 import 'package:lootbazarweb/shared/product_card.dart';
 import 'package:lootbazarweb/tool/ProductShimmerCard.dart';
+import 'package:lootbazarweb/shared/EmptyStateWidget.dart';
 
 class CategoryProductScreen extends ConsumerStatefulWidget {
   final String? categoryId;
@@ -109,21 +111,23 @@ class _CategoryProductScreenState extends ConsumerState<CategoryProductScreen> {
     // Error state
     if (state.errorMessage != null && !state.isLoading) {
       return Padding(
-        padding: EdgeInsets.symmetric(vertical: 100.h),
-        child: Center(
-          child: Column(
-            children: [
-              Text(
-                'Failed to load products',
-                style: TextStyle(fontSize: 14.sp, color: Colors.grey[600]),
+        padding: EdgeInsets.symmetric(vertical: 80.h),
+        child: Column(
+          children: [
+            const EmptyStateWidget(
+              title: 'Something went wrong',
+              subtitle: 'We couldn\'t fetch the products for this category.',
+              icon: Icons.error_outline_rounded,
+            ),
+            SizedBox(height: 12.h),
+            TextButton(
+              onPressed: () => ref.read(categoryProductProvider.notifier).retry(categoryIds: widget.categoryId),
+              child: Text(
+                'Retry',
+                style: AppTextStyle.bold(color: AppTheme.primary),
               ),
-              SizedBox(height: 8.h),
-              TextButton(
-                onPressed: () => ref.read(categoryProductProvider.notifier).retry(categoryIds: widget.categoryId),
-                child: const Text('Retry'),
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
       );
     }
@@ -147,13 +151,8 @@ class _CategoryProductScreenState extends ConsumerState<CategoryProductScreen> {
     // Empty state
     if (state.products.isEmpty) {
       return Padding(
-        padding: EdgeInsets.symmetric(vertical: 100.h),
-        child: Center(
-          child: Text(
-            'No products found',
-            style: TextStyle(fontSize: 14.sp, color: Colors.grey[600]),
-          ),
-        ),
+        padding: EdgeInsets.symmetric(vertical: 80.h),
+        child: const EmptyStateWidget(),
       );
     }
 

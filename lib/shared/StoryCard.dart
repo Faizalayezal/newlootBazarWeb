@@ -2,6 +2,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
+import 'package:lootbazarweb/core/theme.dart';
 import 'package:lootbazarweb/providerd/video/VideoListResponse.dart';
 import 'package:lootbazarweb/route/AppRoutes.dart';
 
@@ -50,7 +51,7 @@ class StoryCard extends StatelessWidget {
               width: 90.w,
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(15.r),
-                color: const Color(0xFFB39EB5), // Card background color from image
+                color: AppTheme.primary, // Card background color from image
               ),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(15.r),
@@ -58,10 +59,10 @@ class StoryCard extends StatelessWidget {
                     ? CachedNetworkImage(
                         imageUrl: productThumb,
                         fit: BoxFit.cover,
-                        placeholder: (_, __) => Container(color: const Color(0xFFB39EB5)),
-                        errorWidget: (_, __, ___) => Container(color: const Color(0xFFB39EB5)),
+                        placeholder: (_, __) => Container(color: AppTheme.primary),
+                        errorWidget: (_, __, ___) => Container(color: AppTheme.primary),
                       )
-                    : Container(color: const Color(0xFFB39EB5)),
+                    : Container(color: AppTheme.primary),
               ),
             ),
             // Circular profile image overlapping the bottom
@@ -73,7 +74,7 @@ class StoryCard extends StatelessWidget {
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   color: Colors.white,
-                  border: Border.all(color: const Color(0xFFB39EB5), width: 2.0),
+                  border: Border.all(color: AppTheme.primary, width: 2.0),
                   boxShadow: [
                     BoxShadow(
                       color: Colors.black.withOpacity(0.1),

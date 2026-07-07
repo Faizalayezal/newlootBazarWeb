@@ -9,8 +9,10 @@ import 'package:lootbazarweb/core/theme.dart';
 import 'package:lootbazarweb/providerd/Products/ProductNotifier.dart';
 import 'package:lootbazarweb/providerd/Products/ProductState.dart';
 import 'package:lootbazarweb/route/AppRoutes.dart';
+import 'package:lootbazarweb/shared/AppTextStyle.dart';
 import 'package:lootbazarweb/shared/product_card.dart';
 import 'package:lootbazarweb/tool/ProductShimmerCard.dart';
+import 'package:lootbazarweb/shared/EmptyStateWidget.dart';
 
 class ShopScreen extends ConsumerStatefulWidget {
   const ShopScreen({super.key});
@@ -148,24 +150,24 @@ class _ShopScreenState extends ConsumerState<ShopScreen> {
     // If products already loaded once, don't wipe them — show them + snackbar
     if (state.errorMessage != null && state.products.isEmpty) {
       return Padding(
-        padding: EdgeInsets.symmetric(vertical: 100.h),
-        child: Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.wifi_off_rounded, size: 40, color: Colors.grey[400]),
-              SizedBox(height: 12.h),
-              Text(
-                'Failed to load products',
-                style: TextStyle(fontSize: 14.sp, color: Colors.grey[600]),
+        padding: EdgeInsets.symmetric(vertical: 80.h),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const EmptyStateWidget(
+              title: 'Something went wrong',
+              subtitle: 'We couldn\'t load the products. Please check your connection.',
+              icon: Icons.wifi_off_rounded,
+            ),
+            SizedBox(height: 16.h),
+            TextButton(
+              onPressed: () => ref.read(productProvider.notifier).retry(),
+              child: Text(
+                'Retry',
+                style: AppTextStyle.bold(color: AppTheme.primary),
               ),
-              SizedBox(height: 8.h),
-              TextButton(
-                onPressed: () => ref.read(productProvider.notifier).retry(),
-                child: const Text('Retry'),
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
       );
     }
@@ -173,13 +175,8 @@ class _ShopScreenState extends ConsumerState<ShopScreen> {
     // ── Empty state ────────────────────────────────────────────────────────────
     if (state.products.isEmpty) {
       return Padding(
-        padding: EdgeInsets.symmetric(vertical: 100.h),
-        child: Center(
-          child: Text(
-            'No products found',
-            style: TextStyle(fontSize: 14.sp, color: Colors.grey[600]),
-          ),
-        ),
+        padding: EdgeInsets.symmetric(vertical: 80.h),
+        child: const EmptyStateWidget(),
       );
     }
 

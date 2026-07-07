@@ -35,8 +35,8 @@ class OtpNotifier extends StateNotifier<OtpState> {
           (response.user.mobileno.trim().isNotEmpty ?? false) &&
           (response.user.address?.trim().isNotEmpty ?? false) &&
           (response.user.pincode?.trim().isNotEmpty ?? false) &&
-          (response.user.interests?.isNotEmpty ?? false);// &&
-          //(response.user.profileImage?.trim().isNotEmpty ?? false);
+          (response.user.interests?.isNotEmpty ?? false) &&
+          (response.user.profileImage?.trim().isNotEmpty ?? false);
 
       await _prefs.setString(userId, response.user.id);
       await _prefs.setString(name, response.user.name ?? '');

@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:lootbazarweb/providerd/video/VideoListResponse.dart';
 import 'package:lootbazarweb/shared/story_whatsapp_buttons.dart';
+import 'package:lootbazarweb/utils/AppLauncher.dart';
 import 'package:video_player/video_player.dart';
 
 class StoryScreen extends StatefulWidget {
@@ -403,7 +404,7 @@ class _ProductStoryPlayerState extends State<_ProductStoryPlayer> with SingleTic
 
           // Bottom dynamic details matching current product
           Positioned(
-            bottom: MediaQuery.of(context).padding.bottom + 16.h,
+            bottom: MediaQuery.of(context).padding.bottom + 50.h,
             left: 12.w,
             right: 12.w,
             child: StoryWhatsappButtons(
@@ -413,6 +414,9 @@ class _ProductStoryPlayerState extends State<_ProductStoryPlayer> with SingleTic
               stock: stock,
               title: title,
               onTap: () {
+                AppLauncher.openWhatsApp(
+                  phone: phone,
+                );
                 // Perform WhatsApp launch or call
                 //  print("Inquiry regarding: $title via phone: $phone");
               },

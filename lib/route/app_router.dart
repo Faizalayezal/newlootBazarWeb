@@ -5,6 +5,7 @@ import 'package:lootbazarweb/providerd/video/VideoListResponse.dart';
 import 'package:lootbazarweb/screens/CategoryProductScreen.dart';
 import 'package:lootbazarweb/screens/InterestsScreen.dart';
 import 'package:lootbazarweb/screens/LoginScreen.dart';
+import 'package:lootbazarweb/screens/ProfileRegisterScreen.dart';
 import 'package:lootbazarweb/screens/SearchScreen.dart';
 import 'package:lootbazarweb/screens/StoryScreen.dart';
 import 'package:lootbazarweb/screens/mainRouterScreen/ProductDetailScreen.dart';
@@ -55,11 +56,11 @@ final appRouter = GoRouter(
       pageBuilder: (context, state) => _page(state, const InterestsScreen()),
     ),
     GoRoute(
-      path: '/setup-profile',
-      name: AppRoutes.setupProfileScreen,
+      path: '/setup-register-profile',
+      name: AppRoutes.setupRegisterProfileScreen,
       parentNavigatorKey: rootNavigatorKey,
       pageBuilder: (context, state) {
-        return _page(state, ProfileScreen());
+        return _page(state, ProfileRegisterScreen());
       },
     ),
     GoRoute(

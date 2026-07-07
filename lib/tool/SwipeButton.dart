@@ -8,6 +8,7 @@ class SwipeButton extends StatefulWidget {
   final bool? isChecked;
   final int? status;
   final bool isApiLoading;
+  final double? amount;
 
   const SwipeButton({
     super.key,
@@ -15,6 +16,7 @@ class SwipeButton extends StatefulWidget {
     this.isChecked,
     this.status,
     required this.isApiLoading,
+    this.amount,
   });
 
   @override
@@ -86,7 +88,7 @@ class _SwipeButtonState extends State<SwipeButton>
     await widget.onCall?.call();
   }
 
-  bool get _isFree => widget.status == 200 && widget.isChecked == true;
+  bool get _isFree => (widget.status == 200 && widget.isChecked == true) || (widget.amount != null && widget.amount == 0);
 
   @override
   Widget build(BuildContext context) {
@@ -98,6 +100,13 @@ class _SwipeButtonState extends State<SwipeButton>
           final double thumbSize = 44.w;
           final double pad = 6.w;
           final double maxDrag = trackW - thumbSize - pad * 2;
+
+          String btnText = 'Slide to Pay | ₹${widget.amount ?? 33}';
+          if (_isProcessing) {
+            btnText = 'Processing...';
+          } else if (_isFree) {
+            btnText = 'Free';
+          }
 
           return GestureDetector(
             onHorizontalDragUpdate: _isProcessing
@@ -149,9 +158,7 @@ class _SwipeButtonState extends State<SwipeButton>
                   Positioned.fill(
                     child: Center(
                       child: Text(
-                        _isProcessing
-                            ? 'Processing...'
-                            : (_isFree ? 'Free' : 'Slide to Pay | ₹33'),
+                        btnText,
                         style: AppTextStyle.regular(
                           size: 15.sp,
                           color: Colors.white,

@@ -88,7 +88,7 @@ class RegisterNotifier extends StateNotifier<RegisterState> {
     try {
       final isProfileCompleted =
           await (_prefs.getString(userId)?.isNotEmpty ?? false) &&
-          //(_prefs.getString(profileImage)?.isNotEmpty ?? false) &&
+          (_prefs.getString(profileImage)?.isNotEmpty ?? false) &&
           (_prefs.getString(address)?.isNotEmpty ?? false) &&
           (_prefs.getString(name)?.isNotEmpty ?? false) &&
           (_prefs.getString(pincode)?.isNotEmpty ?? false) &&
@@ -106,9 +106,38 @@ class RegisterNotifier extends StateNotifier<RegisterState> {
     }
   }
 
-  Future<void> updateProfile() async {
-    XFile? image;
+  Future<void> syncProfile() async {
+    try {
+      final userIdValue = _prefs.getString(userId);
+      if (userIdValue == null || userIdValue.isEmpty) return;
 
+      final data = await _repository.getProfile(userId: userIdValue);
+
+      await _prefs.setString(name, data['name'] ?? '');
+      await _prefs.setString(address, data['address'] ?? '');
+      await _prefs.setString(pincode, data['pincode'] ?? '');
+      await _prefs.setString(profileImage, data['profileImage'] ?? '');
+      await _prefs.setString(phoneNumber, data['mobileno'] ?? '');
+      await _prefs.setString(razorpayKey, data['apiKey'] ?? '');
+      await _prefs.setString(listingAmount, (data['amount'] ?? 0).toString());
+
+      if (data['interests'] != null) {
+        final List<String> interestIds = (data['interests'] as List)
+            .map((i) => i['_id'].toString())
+            .toList();
+        await _prefs.setString(selectedCategory, jsonEncode(interestIds));
+      }
+    } catch (e) {
+      debugPrint("Sync Profile Error: $e");
+    }
+  }
+
+  Future<void> updateProfile({
+    String? newName,
+    String? newAddress,
+    String? newPincode,
+    XFile? newImage,
+  }) async {
     state = state.copyWith(
       isLoading: true,
       isSuccess: false,
@@ -116,28 +145,20 @@ class RegisterNotifier extends StateNotifier<RegisterState> {
     );
 
     try {
-      // SharedPrefs se data lo
       final userIdValue = _prefs.getString(userId) ?? "";
-      final nameValue = _prefs.getString(name) ?? "";
-      final addressValue = _prefs.getString(address) ?? "";
-      final pincodeValue = _prefs.getString(pincode) ?? "";
+      
+      // Use passed values or fall back to current local values
+      final nameValue = newName ?? _prefs.getString(name) ?? "";
+      final addressValue = newAddress ?? _prefs.getString(address) ?? "";
+      final pincodeValue = newPincode ?? _prefs.getString(pincode) ?? "";
+      
       final interestsJson = _prefs.getString(selectedCategory);
-
       final List<String> interestsValue =
           interestsJson != null && interestsJson.isNotEmpty
           ? List<String>.from(jsonDecode(interestsJson))
           : [];
 
-      final imagePath = _prefs.getString(profileImage);
-
-      if (imagePath != null && imagePath.isNotEmpty) {
-        image = XFile(imagePath);
-      }
-      print("--------114>${userIdValue}");
-      print("--------115>${nameValue}");
-      print("--------116>${addressValue}");
-      print("--------117>${pincodeValue}");
-      print("--------118>${interestsValue}");
+      final image = newImage ?? ( _prefs.getString(profileImage) != null ? XFile(_prefs.getString(profileImage)!) : null);
 
       final request = UpdateProfileRequest(
         name: nameValue,
@@ -152,6 +173,7 @@ class RegisterNotifier extends StateNotifier<RegisterState> {
         request: request,
       );
 
+      // Store in local only AFTER successful API response
       await localStore(
         userIdSet: response.id,
         userName: response.name,
@@ -161,6 +183,7 @@ class RegisterNotifier extends StateNotifier<RegisterState> {
         userPhonNumber: response.mobileNo ?? '',
         categories: jsonEncode(response.interests),
       );
+
       state = state.copyWith(
         isLoading: false,
         isSuccess: true,

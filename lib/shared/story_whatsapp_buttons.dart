@@ -43,6 +43,7 @@ class StoryWhatsappButtons extends StatelessWidget {
             // ── Left: WhatsApp icon block ──
             Container(
               width: 68.w,
+              alignment: Alignment.center,
               decoration: BoxDecoration(
                 color: const Color(0xFF25D366),
                 borderRadius: BorderRadius.only(
@@ -50,13 +51,25 @@ class StoryWhatsappButtons extends StatelessWidget {
                   bottomLeft: Radius.circular(8.r),
                 ),
               ),
-              child: Center(
-                child: Image.asset(
-                  "assets/images/chaticon.png",
-                  height: 30.h,
-                  width: 30.w,
-                  fit: BoxFit.cover,
-                ),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Image.asset(
+                    "assets/images/chaticon.png",
+                    height: 30.h,
+                    width: 30.w,
+                    fit: BoxFit.cover,
+                  ),
+                  SizedBox(height: 2.h),
+                  Text(
+                    'Chat Now',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 9.sp,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
               ),
             ),
 

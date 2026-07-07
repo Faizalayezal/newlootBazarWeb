@@ -11,6 +11,8 @@ import 'package:lootbazarweb/providerd/Products/SearchProductNotifier.dart';
 import 'package:lootbazarweb/route/AppRoutes.dart';
 import 'package:lootbazarweb/shared/product_card.dart';
 import 'package:lootbazarweb/tool/ProductShimmerCard.dart';
+import 'package:lootbazarweb/shared/EmptyStateWidget.dart';
+import 'package:lootbazarweb/utils/preferences.dart';
 
 class SearchScreen extends ConsumerStatefulWidget {
   const SearchScreen({super.key});
@@ -21,11 +23,18 @@ class SearchScreen extends ConsumerStatefulWidget {
 
 class _SearchScreenState extends ConsumerState<SearchScreen> {
   final ScrollController _scrollController = ScrollController();
+  List<String> _history = [];
 
   @override
   void initState() {
     super.initState();
     _scrollController.addListener(_onScroll);
+    _loadHistory();
+  }
+
+  Future<void> _loadHistory() async {
+    final list = await SharedPrefs().getSearchHistory();
+    setState(() => _history = list);
   }
 
   void _onScroll() {
@@ -39,6 +48,23 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
   void dispose() {
     _scrollController.dispose();
     super.dispose();
+  }
+
+  void _addToHistory(String query) async {
+    if (query.isEmpty) return;
+    List<String> newHistory = List.from(_history);
+    newHistory.remove(query); // Remove if exists to move to top
+    newHistory.insert(0, query);
+    if (newHistory.length > 10) newHistory = newHistory.sublist(0, 10);
+    setState(() => _history = newHistory);
+    await SharedPrefs().saveSearchHistory(newHistory);
+  }
+
+  void _removeFromHistory(String query) async {
+    List<String> newHistory = List.from(_history);
+    newHistory.remove(query);
+    setState(() => _history = newHistory);
+    await SharedPrefs().saveSearchHistory(newHistory);
   }
 
   @override
@@ -60,7 +86,13 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
           slivers: [
             SliverPersistentHeader(
               pinned: true,
-              delegate: _OrangeHeaderSearchDelegate(topPad: topPad),
+              delegate: _OrangeHeaderSearchDelegate(
+                topPad: topPad,
+                onSearch: (q) {
+                  _addToHistory(q);
+                  ref.read(searchProductProvider.notifier).searchNow(q);
+                },
+              ),
             ),
             SliverToBoxAdapter(
               child: Container(
@@ -74,9 +106,16 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                     ],
                   ),
                 ),
-                child: Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 12.w),
-                  child: _buildContent(productState),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (_history.isNotEmpty && productState.products.isEmpty && !productState.isLoading)
+                      _buildHistoryList(),
+                    Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 12.w),
+                      child: _buildContent(productState),
+                    ),
+                  ],
                 ),
               ),
             ),
@@ -86,11 +125,92 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     );
   }
 
+  Widget _buildHistoryList() {
+    return Padding(
+      padding: EdgeInsets.symmetric(vertical: 16.h),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: EdgeInsets.symmetric(horizontal: 16.w),
+            child: Text(
+              "Recent Searches",
+              style: TextStyle(
+                fontSize: 14.sp,
+                fontWeight: FontWeight.w700,
+                color: Colors.black87,
+              ),
+            ),
+          ),
+          SizedBox(height: 12.h),
+          SizedBox(
+            height: 38.h,
+            child: ListView.separated(
+              padding: EdgeInsets.symmetric(horizontal: 16.w),
+              scrollDirection: Axis.horizontal,
+              itemCount: _history.length,
+              separatorBuilder: (_, __) => SizedBox(width: 10.w),
+              itemBuilder: (context, index) {
+                final query = _history[index];
+                return Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(20.r),
+                    border: Border.all(color: Colors.grey.shade200),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.03),
+                        blurRadius: 4,
+                        offset: const Offset(0, 2),
+                      )
+                    ],
+                  ),
+                  child: Row(
+                    children: [
+                      InkWell(
+                        onTap: () {
+                          ref.read(searchProductProvider.notifier).searchNow(query);
+                        },
+                        borderRadius: BorderRadius.circular(20.r),
+                        child: Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
+                          child: Text(
+                            query,
+                            style: TextStyle(
+                              fontSize: 13.sp,
+                              color: AppTheme.primary,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ),
+                      InkWell(
+                        onTap: () => _removeFromHistory(query),
+                        child: Padding(
+                          padding: EdgeInsets.only(right: 8.w),
+                          child: Icon(
+                            Icons.close_rounded,
+                            size: 16.sp,
+                            color: Colors.grey.shade400,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildContent(ProductState state) {
     // ── Idle state — kuch search nahi kiya abhi ──
     if (state.searchQuery.isEmpty && state.products.isEmpty && !state.isLoading) {
       return Padding(
-        padding: EdgeInsets.symmetric(vertical: 80.h),
+        padding: EdgeInsets.symmetric(vertical: 60.h),
         child: Center(
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -98,7 +218,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
               Icon(Icons.search_rounded, size: 48, color: Colors.grey[300]),
               SizedBox(height: 12.h),
               Text(
-                'Search for products',
+                'Find the best deals',
                 style: TextStyle(
                   fontSize: 14.sp,
                   color: Colors.grey[400],
@@ -156,19 +276,11 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     // ── No results ──
     if (state.products.isEmpty && state.searchQuery.isNotEmpty) {
       return Padding(
-        padding: EdgeInsets.symmetric(vertical: 100.h),
-        child: Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.inbox_rounded, size: 48, color: Colors.grey[300]),
-              SizedBox(height: 12.h),
-              Text(
-                'No results for "${state.searchQuery}"',
-                style: TextStyle(fontSize: 14.sp, color: Colors.grey[500]),
-              ),
-            ],
-          ),
+        padding: EdgeInsets.symmetric(vertical: 80.h),
+        child: EmptyStateWidget(
+          title: 'No results for "${state.searchQuery}"',
+          subtitle: 'Try searching for something else or check your spelling.',
+          icon: Icons.search_off_rounded,
         ),
       );
     }
@@ -214,7 +326,8 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
 // ─────────────────────────────────────────────────────────────────────────────
 class _OrangeHeaderSearchDelegate extends SliverPersistentHeaderDelegate {
   final double topPad;
-  const _OrangeHeaderSearchDelegate({required this.topPad});
+  final Function(String) onSearch;
+  const _OrangeHeaderSearchDelegate({required this.topPad, required this.onSearch});
 
   @override
   double get maxExtent => topPad + 130;
@@ -311,7 +424,7 @@ class _OrangeHeaderSearchDelegate extends SliverPersistentHeaderDelegate {
           left: 16,
           right: 16,
           height: 50,
-          child: const _SearchBar(),
+          child: _SearchBar(onSearch: onSearch),
         ),
       ],
     );
@@ -326,7 +439,8 @@ class _OrangeHeaderSearchDelegate extends SliverPersistentHeaderDelegate {
 // Search Bar — searchProductProvider use karta hai
 // ─────────────────────────────────────────────────────────────────────────────
 class _SearchBar extends ConsumerStatefulWidget {
-  const _SearchBar();
+  final Function(String) onSearch;
+  const _SearchBar({required this.onSearch});
 
   @override
   ConsumerState<_SearchBar> createState() => _SearchBarState();
@@ -382,6 +496,11 @@ class _SearchBarState extends ConsumerState<_SearchBar> {
                     .read(searchProductProvider.notifier)
                     .onSearchChanged(value);
               },
+              onSubmitted: (value) {
+                if (value.trim().isNotEmpty) {
+                  widget.onSearch(value.trim());
+                }
+              },
               decoration: InputDecoration(
                 hintText: 'Find the perfect lot',
                 hintStyle: TextStyle(
@@ -398,9 +517,12 @@ class _SearchBarState extends ConsumerState<_SearchBar> {
           GestureDetector(
             onTap: () {
               FocusScope.of(context).unfocus();
-              ref
-                  .read(searchProductProvider.notifier)
-                  .searchNow(_controller.text.trim());
+              final q = _controller.text.trim();
+              if (q.isNotEmpty) {
+                widget.onSearch(q);
+              } else {
+                ref.read(searchProductProvider.notifier).searchNow("");
+              }
             },
             child: Container(
               width: 42,

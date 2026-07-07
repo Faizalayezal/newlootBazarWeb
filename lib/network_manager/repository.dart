@@ -64,6 +64,17 @@ class Repository {
     }
   }
 
+  Future<Map<String, dynamic>> getProfile({required String userId}) async {
+    try {
+      final response = await _dioHelper.get(
+        url: '${ApiConstants.updateProfile}/$userId',
+      );
+      return response as Map<String, dynamic>;
+    } catch (e) {
+      throw Exception('Get profile failed: $e');
+    }
+  }
+
   Future<RegisterUser> updateProfile({
     required String userId,
     required UpdateProfileRequest request,
@@ -177,7 +188,7 @@ class Repository {
     }
   }
 
-  Future<void> storeProduct({
+  Future<Map<String, dynamic>> storeProduct({
     required String title,
     required String description,
     required double price,
@@ -214,12 +225,50 @@ class Repository {
         formData.files.add(MapEntry('images', await createMultipartFile(path)));
       }
 
-      await _dioHelper.post(
+      final response = await _dioHelper.post(
         url: ApiConstants.storeProduct,
         requestBody: formData,
       );
+      return response as Map<String, dynamic>;
     } catch (e) {
       throw Exception('Store product failed: $e');
+    }
+  }
+
+  Future<void> updatePaymentStatus({
+    required String productId,
+    required String userId,
+    required String paymentStatus,
+  }) async {
+    try {
+      await _dioHelper.putFormData(
+        url: ApiConstants.paymentStatus,
+        formData: {
+          'productId': productId,
+          'userId': userId,
+          'paymentStatus': paymentStatus,
+        },
+      );
+    } catch (e) {
+      throw Exception('Update payment status failed: $e');
+    }
+  }
+
+  Future<Map<String, dynamic>> validateCoupon({
+    required String code,
+    required double orderAmount,
+  }) async {
+    try {
+      final response = await _dioHelper.post(
+        url: ApiConstants.validateCoupon,
+        requestBody: {
+          'code': code,
+          'orderAmount': orderAmount,
+        },
+      );
+      return response as Map<String, dynamic>;
+    } catch (e) {
+      throw Exception('Coupon validation failed: $e');
     }
   }
 

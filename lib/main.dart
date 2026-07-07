@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -7,9 +8,39 @@ import 'package:lootbazarweb/tool/NotSupportedScreen.dart';
 import 'package:lootbazarweb/url_strategy/url_strategy_stub.dart';
 import 'package:responsive_framework/responsive_framework.dart';
 import 'package:flutter/services.dart';
+import 'package:workmanager/workmanager.dart';
 import 'constant/AppToast.dart';
 import 'utils/preferences.dart';
+import 'network_manager/dio_helper.dart';
+import 'constant/ApiConstants.dart';
 
+@pragma('vm:entry-point')
+void callbackDispatcher() {
+  Workmanager().executeTask((taskName, inputData) async {
+    if (taskName == "updatePaymentStatusTask") {
+      final String? productId = inputData?['productId'];
+      final String? userId = inputData?['userId'];
+      
+      if (productId != null && userId != null) {
+        try {
+          final DioHelper dioHelper = DioHelper();
+          await dioHelper.putFormData(
+            url: ApiConstants.paymentStatus,
+            formData: {
+              'productId': productId,
+              'userId': userId,
+              'paymentStatus': 'paid',
+            },
+          );
+          return Future.value(true);
+        } catch (e) {
+          return Future.value(false);
+        }
+      }
+    }
+    return Future.value(true);
+  });
+}
 
 void main() async  {
   configureUrlStrategy();
@@ -17,6 +48,14 @@ void main() async  {
   AppToast.navigatorKey = rootNavigatorKey;
 
   await SharedPrefs().init();
+  
+  if (!kIsWeb) {
+    await Workmanager().initialize(
+      callbackDispatcher,
+      isInDebugMode: false,
+    );
+  }
+
   await SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,
   ]);

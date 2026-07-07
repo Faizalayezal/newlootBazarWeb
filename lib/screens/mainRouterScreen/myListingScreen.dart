@@ -13,6 +13,7 @@ import 'package:lootbazarweb/shared/my_listing.dart';
 import 'package:lootbazarweb/shared/product_card.dart';
 import 'package:lootbazarweb/tool/MyListingShimmer.dart';
 import 'package:lootbazarweb/tool/ProductShimmerCard.dart';
+import 'package:lootbazarweb/shared/EmptyStateWidget.dart';
 
 class MyListingScreen extends ConsumerStatefulWidget {
   const MyListingScreen({super.key});
@@ -97,7 +98,15 @@ class _MyListingScreenState extends ConsumerState<MyListingScreen> {
                   ),
                   child: Padding(
                     padding: EdgeInsets.symmetric(horizontal: 12.w),
-                    child: ListView.builder(
+                    child: products.isEmpty && !isLoading
+                        ? Padding(
+                            padding: EdgeInsets.symmetric(vertical: 80.h),
+                            child: const EmptyStateWidget(
+                              title: 'You haven\'t listed any products yet',
+                              subtitle: 'Start selling by creating your first product listing!',
+                            ),
+                          )
+                        : ListView.builder(
                       physics: const NeverScrollableScrollPhysics(),
                       padding: EdgeInsets.zero,
                       scrollDirection: Axis.vertical,

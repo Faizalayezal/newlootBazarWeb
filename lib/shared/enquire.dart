@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:lootbazarweb/providerd/productDetail/product_detail_model.dart';
+import 'package:lootbazarweb/utils/AppLauncher.dart';
 
 class EnquiryList extends StatelessWidget {
   final bool isLead;
@@ -85,7 +86,9 @@ class EnquiryList extends StatelessWidget {
               // 3. Compact Green WhatsApp Quick Trigger Button
               GestureDetector(
                 onTap: () {
-                  // Direct trigger action
+                  AppLauncher.openWhatsApp(
+                    phone: '7016685053',
+                  );
                 },
                 child: Container(
                   padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 6.h),

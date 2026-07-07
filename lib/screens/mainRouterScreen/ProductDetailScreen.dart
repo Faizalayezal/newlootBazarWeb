@@ -17,6 +17,7 @@ import 'package:lootbazarweb/route/AppRoutes.dart';
 import 'package:lootbazarweb/shared/AppTextStyle.dart';
 import 'package:lootbazarweb/shared/enquire.dart';
 import 'package:lootbazarweb/shared/product_card.dart';
+import 'package:lootbazarweb/utils/AppLauncher.dart';
 import 'package:lootbazarweb/utils/preferences_key.dart';
 import 'package:shimmer/shimmer.dart';
 
@@ -531,23 +532,14 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
               // ─── 5. Stats Row ───
               Padding(
                 padding: EdgeInsets.symmetric(horizontal: 16.w),
-                child: SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: Row(
-                    children: [
-                      _buildStatCol(
-                          '₹${product?.price ?? ''}', 'Rate'),
-                      SizedBox(width: 42.w),
-                      _buildStatCol(
-                          '${product?.stock ?? ''}', 'Quantity'),
-                      SizedBox(width: 42.w),
-                      _buildStatCol(
-                          '${product?.moq ?? ''}', 'MOQ'),
-                      SizedBox(width: 42.w),
-                      _buildStatCol(
-                          '${product?.location ?? ''}', 'Location'),
-                    ],
-                  ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    _buildStatCol('₹${product?.price ?? ''}', 'Rate'),
+                    _buildStatCol('${product?.stock ?? ''}', 'Quantity'),
+                    _buildStatCol('${product?.moq ?? ''}', 'MOQ'),
+                    _buildStatCol('${product?.location ?? ''}', 'Location'),
+                  ],
                 ),
               ),
               SizedBox(height: 24.h),
@@ -564,6 +556,9 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                         .trackView(
                       productId: widget.productId ?? '',
                       type: 'call',
+                    );
+                    AppLauncher.openWhatsApp(
+                      phone: product?.phoneNumber??'',
                     );
                   },
                 ),
@@ -1021,11 +1016,26 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
     );
   }
   Widget _buildStatCol(String val, String label) {
-    return Column(crossAxisAlignment: CrossAxisAlignment.center, children: [
-      Text(val, style: TextStyle(fontSize: 22.sp, fontWeight: FontWeight.w800, color: const Color(0xFF1A1A1A))),
-      SizedBox(height: 4.h),
-      Text(label, style: TextStyle(fontSize: 11.sp, fontWeight: FontWeight.w400, color: Colors.grey.shade500)),
-    ]);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Text(
+          val,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(
+            fontSize: 18.sp,
+            fontWeight: FontWeight.w800,
+            color: const Color(0xFF1A1A1A),
+          ),
+        ),
+        SizedBox(height: 4.h),
+        Text(
+          label,
+          style: AppTextStyle.regular(size: 11.sp, color: Colors.grey.shade500),
+        ),
+      ],
+    );
   }
   Widget _buildSectionHeader(String title) {
     return Padding(

@@ -30,7 +30,7 @@ class StoreProductNotifier extends StateNotifier<StoreProductState> {
       errorMessage: null,
     );
     try {
-      await _repository.storeProduct(
+      final response = await _repository.storeProduct(
         title: title,
         description: description,
         price: price,
@@ -42,9 +42,19 @@ class StoreProductNotifier extends StateNotifier<StoreProductState> {
         location: location,
         imagePaths: imagePaths,
       );
+
+      // Extract productId from response. Adjust key if necessary (e.g., '_id' or 'id')
+      String? prodId;
+      if (response['product'] != null) {
+        prodId = response['product']['_id'] ?? response['product']['id'];
+      } else {
+        prodId = response['_id'] ?? response['id'];
+      }
+
       state = state.copyWith(
         status: ProductStatus.success,
         isSuccess: true,
+        productId: prodId,
       );
     } catch (e) {
       state = state.copyWith(
@@ -57,6 +67,22 @@ class StoreProductNotifier extends StateNotifier<StoreProductState> {
 
   void reset() {
     state = const StoreProductState();
+  }
+
+  Future<void> updatePaymentStatus({
+    required String productId,
+    required String userId,
+    required String paymentStatus,
+  }) async {
+    try {
+      await _repository.updatePaymentStatus(
+        productId: productId,
+        userId: userId,
+        paymentStatus: paymentStatus,
+      );
+    } catch (e) {
+      // Handle error if needed
+    }
   }
 }
 

@@ -7,10 +7,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:lootbazarweb/providerd/notification/NotificationNotifier.dart';
 import 'package:lootbazarweb/providerd/notification/NotificationProduct.dart';
+import 'package:lootbazarweb/utils/AppLauncher.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:lootbazarweb/core/CustomAppBar.dart';
 import 'package:lootbazarweb/core/theme.dart';
 import 'package:lootbazarweb/shared/AppTextStyle.dart';
+import 'package:lootbazarweb/shared/EmptyStateWidget.dart';
 
 class NotificationScreen extends ConsumerStatefulWidget {
   const NotificationScreen({super.key});
@@ -93,18 +95,19 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.wifi_off_rounded, size: 48, color: Colors.grey[400]),
-            SizedBox(height: 12.h),
-            Text(
-              'Failed to load notifications',
-              style: AppTextStyle.regular(
-                  size: 14.sp, color: Colors.grey[600]!),
+            const EmptyStateWidget(
+              title: 'Failed to load notifications',
+              subtitle: 'Please check your connection and try again.',
+              icon: Icons.wifi_off_rounded,
             ),
-            SizedBox(height: 12.h),
+            SizedBox(height: 16.h),
             TextButton(
               onPressed: () =>
                   ref.read(notificationProvider.notifier).getNotifications(),
-              child: const Text('Retry'),
+              child: Text(
+                'Retry',
+                style: AppTextStyle.bold(color: AppTheme.primary),
+              ),
             ),
           ],
         ),
@@ -113,20 +116,10 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
 
     // ── Empty ────────────────────────────────────────────────────────────
     if (state.notifications.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.notifications_off_outlined,
-                size: 56, color: Colors.grey[300]),
-            SizedBox(height: 12.h),
-            Text(
-              'No notifications yet',
-              style: AppTextStyle.regular(
-                  size: 15.sp, color: Colors.grey[500]!),
-            ),
-          ],
-        ),
+      return const EmptyStateWidget(
+        title: 'No notifications yet',
+        subtitle: 'We\'ll notify you when someone views or enquiries about your products.',
+        icon: Icons.notifications_none_rounded,
       );
     }
 
@@ -335,24 +328,31 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
               color: const Color(0xFF25D366), // Solid WhatsApp Green
               borderRadius: BorderRadius.circular(4.r),
             ),
-            child: Row(
-              children: [
-                Image.asset(
-                  "assets/images/chaticon.png",
-                  height: 16.h,
-                  width: 16.w,
-                  fit: BoxFit.cover,
-                ),
-                SizedBox(width: 2.w),
-                Text(
-                  'Chat now',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 9.sp,
-                    fontWeight: FontWeight.w700,
+            child: GestureDetector(
+              onTap: (){
+                AppLauncher.openWhatsApp(
+                  phone: n.viewer.mobileNo,
+                );
+              },
+              child: Row(
+                children: [
+                  Image.asset(
+                    "assets/images/chaticon.png",
+                    height: 16.h,
+                    width: 16.w,
+                    fit: BoxFit.cover,
                   ),
-                ),
-              ],
+                  SizedBox(width: 2.w),
+                  Text(
+                    'Chat now',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 9.sp,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),

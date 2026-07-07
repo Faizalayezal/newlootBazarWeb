@@ -140,7 +140,7 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
       if (next.isProfileCompleted) {
         context.goNamed(AppRoutes.homeScreen);
       } else {
-        context.go(AppRoutes.setupProfileScreen);
+        context.go(AppRoutes.setupRegisterProfileScreen);
       }
     });
     return Scaffold(

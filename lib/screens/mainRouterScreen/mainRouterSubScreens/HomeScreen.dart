@@ -10,6 +10,7 @@ import 'package:lootbazarweb/core/theme.dart';
 import 'package:lootbazarweb/providerd/Products/ProductNotifier.dart';
 import 'package:lootbazarweb/providerd/Products/ProductState.dart';
 import 'package:lootbazarweb/providerd/category/CategoryNotifier.dart';
+import 'package:lootbazarweb/providerd/register/RegisterNotifier.dart';
 import 'package:lootbazarweb/providerd/video/VideoNotifier.dart';
 import 'package:lootbazarweb/route/AppRoutes.dart';
 import 'package:lootbazarweb/shared/AnimatedCategoryCard.dart';
@@ -19,6 +20,7 @@ import 'package:lootbazarweb/shared/product_card.dart';
 import 'package:lootbazarweb/tool/ProductShimmerCard.dart';
 import 'package:lootbazarweb/utils/preferences.dart';
 import 'package:lootbazarweb/utils/preferences_key.dart';
+import 'package:lootbazarweb/shared/EmptyStateWidget.dart';
 import 'package:shimmer/shimmer.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
@@ -34,13 +36,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   late final ValueNotifier<double> _scrollProgress = ValueNotifier(0.0);
 
   static const double _collapseBy = 130.0;
-
-  final List<Color> colors = [
-    AppTheme.rColor1,
-    AppTheme.rColor2,
-    AppTheme.rColor3,
-    AppTheme.rColor4,
-  ];
 
   List<Color> assignedColors = [];
 
@@ -60,15 +55,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     Future.microtask(() {
       ref.read(productProvider.notifier).getProducts();
       ref.read(videoProvider.notifier).getVideos();
+      ref.read(registerProvider.notifier).syncProfile();
     });
   }
 
   void _assignColors(int count) {
     if (assignedColors.length != count) {
-      final random = Random();
       assignedColors = List.generate(
         count,
-        (index) => colors[random.nextInt(colors.length)],
+            (index) => AppTheme.pastelColors[index % AppTheme.pastelColors.length],
       );
     }
   }
@@ -100,13 +95,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     }
   }
 
-  /* List<List<int>> _buildPairs() {
-    final pairs = <List<int>>[];
-    for (int i = 0; i < categoryList.length; i += 2) {
-      pairs.add([i, if (i + 1 < categoryList.length) i + 1]);
-    }
-    return pairs;
-  }*/
 
   @override
   void dispose() {
@@ -143,8 +131,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   SizedBox(
                     width: 155.w,
                     height: 70.h,
-                    child: GestureDetector(
-                      onTap: () {
+                    child: AnimatedCategoryCard(
+                      onTap: (){
                         context.pushNamed(
                           AppRoutes.productCategory,
                           extra: {
@@ -153,13 +141,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           },
                         );
                       },
-                      child: AnimatedCategoryCard(
-                        title: categories[indices[k]].name,
-                        color: assignedColors.isNotEmpty
-                            ? assignedColors[indices[k]]
-                            : colors[indices[k] % colors.length],
-                        delay: indices[k] * 100,
-                      ),
+                      image: categories[indices[k]].image,
+                      title: categories[indices[k]].name,
+                      color: assignedColors[pairIndex],
+                      delay: indices[k] * 100,
                     ),
                   ),
                 ],
@@ -252,12 +237,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     }
 
                     return SizedBox(
-                      height: 100.h,
+                      height: 190.h,
                       child: ListView.separated(
                         scrollDirection: Axis.horizontal,
+                        clipBehavior: Clip.none,
                         padding: EdgeInsets.symmetric(horizontal: 12.w),
                         itemCount: videoState.videos.length,
-                        separatorBuilder: (_, __) => SizedBox(width: 12.w),
+                        separatorBuilder: (_, __) => SizedBox(width: 4.w),
                         itemBuilder: (context, index) {
                           final video = videoState.videos[index];
                           return StoryCard(
@@ -305,39 +291,44 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   Widget _buildStoryShimmer() {
     return SizedBox(
-      height: 100.h,
-
+      height: 190.h,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
-
+        clipBehavior: Clip.none,
         padding: EdgeInsets.symmetric(horizontal: 12.w),
-
         itemCount: 5,
-
         separatorBuilder: (_, __) => SizedBox(width: 12.w),
-
         itemBuilder: (_, __) => Shimmer.fromColors(
           baseColor: Colors.grey.shade300,
-
           highlightColor: Colors.grey.shade100,
-
           child: Column(
             children: [
-              Container(
-                width: 62.w,
-
-                height: 62.h,
-
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade300,
-
-                  shape: BoxShape.circle,
-                ),
+              Stack(
+                clipBehavior: Clip.none,
+                alignment: Alignment.bottomCenter,
+                children: [
+                  Container(
+                    width: 90.w,
+                    height: 150.h,
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade300,
+                      borderRadius: BorderRadius.circular(15.r),
+                    ),
+                  ),
+                  Positioned(
+                    bottom: -20.h,
+                    child: Container(
+                      width: 44.w,
+                      height: 44.w,
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade300,
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.white, width: 2),
+                      ),
+                    ),
+                  ),
+                ],
               ),
-
-              SizedBox(height: 6.h),
-
-              Container(width: 50.w, height: 10.h, color: Colors.grey.shade300),
             ],
           ),
         ),
@@ -349,21 +340,23 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     // Error state
     if (state.errorMessage != null && !state.isLoading) {
       return Padding(
-        padding: EdgeInsets.symmetric(vertical: 10.h),
-        child: Center(
-          child: Column(
-            children: [
-              Text(
-                'Failed to load products',
-                style: TextStyle(fontSize: 14.sp, color: Colors.grey[600]),
+        padding: EdgeInsets.symmetric(vertical: 40.h),
+        child: Column(
+          children: [
+            const EmptyStateWidget(
+              title: 'Failed to load products',
+              subtitle: 'Please check your internet connection and try again.',
+              icon: Icons.error_outline_rounded,
+            ),
+            SizedBox(height: 12.h),
+            TextButton(
+              onPressed: () => ref.read(productProvider.notifier).retry(),
+              child: Text(
+                'Retry',
+                style: AppTextStyle.bold(color: AppTheme.primary),
               ),
-              SizedBox(height: 8.h),
-              TextButton(
-                onPressed: () => ref.read(productProvider.notifier).retry(),
-                child: const Text('Retry'),
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
       );
     }
@@ -387,13 +380,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     // Empty state
     if (state.products.isEmpty) {
       return Padding(
-        padding: EdgeInsets.symmetric(vertical: 100.h),
-        child: Center(
-          child: Text(
-            'No products found',
-            style: TextStyle(fontSize: 14.sp, color: Colors.grey[600]),
-          ),
-        ),
+        padding: EdgeInsets.symmetric(vertical: 60.h),
+        child: const EmptyStateWidget(),
       );
     }
 

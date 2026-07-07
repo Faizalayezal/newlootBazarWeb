@@ -8,3 +8,6 @@ const pincode = "pincode";
 const phoneNumber = "phoneNumber";
 const selectedCategory = "selectedCategory";
 const categoryKey = "cached_categories";
+const razorpayKey = "razorpayKey";
+const listingAmount = "listingAmount";
+const searchHistoryKey = "search_history";

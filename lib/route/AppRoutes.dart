@@ -8,6 +8,7 @@ class AppRoutes {
   static const String shopScreen = 'shop';
   static const String sellScreen = 'sell';
   static const String notificationScreen = 'notification';
+  static const String setupRegisterProfileScreen = 'setup-register-profile';
   static const String setupProfileScreen = 'setup-profile';
   static const String profileScreen = 'profile';
   static const String searchScreen = 'search';

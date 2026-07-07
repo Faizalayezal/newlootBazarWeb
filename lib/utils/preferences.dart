@@ -44,7 +44,24 @@ class SharedPrefs {
     return _prefs.containsKey(categoryKey);
   }
 
+  Future<List<String>> getSearchHistory() async {
+    return _prefs.getStringList(searchHistoryKey) ?? [];
+  }
+
+  Future<void> saveSearchHistory(List<String> history) async {
+    await _prefs.setStringList(searchHistoryKey, history);
+  }
+
   Future<bool> clearPrefs() => _prefs.clear();
+
+  Future<void> clearUserPrefs() async {
+    final categories = _prefs.getString(categoryKey);
+    await _prefs.clear();
+    if (categories != null) {
+      await _prefs.setString(categoryKey, categories);
+    }
+  }
+
   Future<bool> removePrefs(String key)async => _prefs.remove(key);
 
 
