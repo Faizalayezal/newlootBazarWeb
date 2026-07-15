@@ -69,11 +69,12 @@ final appRouter = GoRouter(
       parentNavigatorKey: rootNavigatorKey,
       pageBuilder: (context, state) {
         final data = state.extra as Map<String, dynamic>?;
+        final queryId = state.uri.queryParameters['productId'];
 
         return _page(
           state,
           ProductDetailScreen(
-            productId: data?['productId']?.toString() ?? '',
+            productId: data?['productId']?.toString() ?? queryId ?? '',
           ),
         );
       },

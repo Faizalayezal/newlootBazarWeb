@@ -15,6 +15,7 @@ import 'package:lootbazarweb/providerd/productDetail/product_detail_model.dart';
 import 'package:lootbazarweb/providerd/productDetail/product_detail_state.dart';
 import 'package:lootbazarweb/route/AppRoutes.dart';
 import 'package:lootbazarweb/shared/AppTextStyle.dart';
+import 'package:lootbazarweb/shared/PremiumLoadingButton.dart';
 import 'package:lootbazarweb/shared/enquire.dart';
 import 'package:lootbazarweb/shared/product_card.dart';
 import 'package:lootbazarweb/utils/AppLauncher.dart';
@@ -23,6 +24,7 @@ import 'package:shimmer/shimmer.dart';
 
 import 'package:image_picker/image_picker.dart';
 import 'package:video_player/video_player.dart';
+import 'package:share_plus/share_plus.dart';
 
 // product_detail_screen.dart
 
@@ -51,21 +53,105 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
   Timer? _countdownTimer;
   Duration _remainingTime = Duration.zero;
 
+  Timer? _guestTimer;
+  bool _isGuest = false;
+  bool _isDialogOpen = false;
 
   @override
   void initState() {
     super.initState();
     _pageController = PageController();
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadMyUserId().then((_) => _startGuestTimerIfNeeded());
       _loadDetail();
-      _loadMyUserId();
     });
   }
 
   Future<void> _loadMyUserId() async {
     final prefs = ref.read(sharedPrefsProvider);
     final id = await prefs.getString(userId);
-    if (mounted) setState(() => _myUserId = id);
+    if (mounted) {
+      setState(() {
+        _myUserId = id;
+        _isGuest = id == null || id.isEmpty;
+      });
+    }
+  }
+
+  void _startGuestTimerIfNeeded() {
+    if (_isGuest) {
+      _guestTimer?.cancel();
+      _guestTimer = Timer(const Duration(seconds: 10), () {
+        if (mounted && _isGuest) {
+          _showMandatoryLoginDialog();
+        }
+      });
+    }
+  }
+
+  void _showMandatoryLoginDialog() {
+    if (_isDialogOpen || !mounted) return;
+    _isDialogOpen = true;
+
+    Future.delayed(Duration.zero, () {
+      if (!mounted) return;
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => PopScope(
+          canPop: false,
+          child: Dialog(
+            backgroundColor: Colors.white,
+            elevation: 8,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24.r)),
+            child: Container(
+              width: 320.w,
+              padding: EdgeInsets.all(24.r),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    padding: EdgeInsets.all(16.r),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFF5722).withOpacity(0.1),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(Icons.lock_person_rounded, color: const Color(0xFFFF5722), size: 40.sp),
+                  ),
+                  SizedBox(height: 20.h),
+                  Text("Unlock Full Access", style: AppTextStyle.bold(size: 22.sp)),
+                  SizedBox(height: 12.h),
+                  Text(
+                    "Register now to enquire about this product, view more listings, and get the best deals on LootBazar!",
+                    textAlign: TextAlign.center,
+                    style: AppTextStyle.regular(size: 14.sp, color: Colors.grey.shade600),
+                  ),
+                  SizedBox(height: 30.h),
+                  PremiumLoadingButton(
+                    isLoading: false,
+                    onTap: () {
+                      _isDialogOpen = false;
+                      context.goNamed(AppRoutes.loginScreen);
+                    },
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+    }).then((_) => _isDialogOpen = false);
+  }
+
+  void _shareProduct() {
+    if (widget.productId == null) return;
+    final product = ref.read(productDetailProvider).product;
+    final String shareUrl = "https://lootbazar.vercel.app/product-detail?productId=${widget.productId}";
+    
+    Share.share(
+      "Check out this product on LootBazar: ${product?.title ?? ''}\n\n$shareUrl",
+      subject: product?.title,
+    );
   }
 
   void _loadDetail() async {
@@ -73,10 +159,14 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
     await ref
         .read(productDetailProvider.notifier)
         .getProductDetail(productId: widget.productId!);
-    await ref.read(productDetailProvider.notifier).trackView(
-      productId: widget.productId ?? '',
-      type: 'view',
-    );
+    
+    // Only track view if user is logged in
+    if (!_isGuest) {
+      await ref.read(productDetailProvider.notifier).trackView(
+        productId: widget.productId ?? '',
+        type: 'view',
+      );
+    }
 
     final product = ref.read(productDetailProvider).product;
     if (product != null && product.createdAt != null) {
@@ -118,11 +208,28 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
   }
 
   Future<void> _pickAndUploadImage() async {
+    final product = ref.read(productDetailProvider).product;
+    final currentCount = product?.images.length ?? 0;
+
+    if (currentCount >= 20) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Maximum 20 images allowed'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
     // Multiple images support
     final List<XFile> picked = await _picker.pickMultiImage(imageQuality: 85);
     if (picked.isEmpty || widget.productId == null || _myUserId == null) return;
 
-    for (final image in picked) {
+    // Remaining slots calculate karo
+    final remainingSlots = 20 - currentCount;
+    final List<XFile> toUpload = picked.take(remainingSlots).toList();
+
+    for (final image in toUpload) {
       await ref.read(productDetailProvider.notifier).uploadImage(
         productId: widget.productId!,
         imageFile: image,
@@ -136,19 +243,29 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
       SnackBar(
         content: Text(
           state.isImageUploadSuccess
-              ? '${picked.length} image(s) uploaded successfully!'
+              ? '${toUpload.length} image(s) uploaded successfully!'
               : 'Upload failed: ${state.imageUploadError}',
         ),
         backgroundColor:
         state.isImageUploadSuccess ? Colors.green : Colors.red,
       ),
     );
+
+    if (picked.length > remainingSlots) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Limit exceeded! Only the first 20 images were kept.'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+    }
   }
 
   @override
   void dispose() {
     _pageController.dispose();
     _countdownTimer?.cancel();
+    _guestTimer?.cancel();
     super.dispose();
   }
 
@@ -303,17 +420,25 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
     final similarList = state.similarProducts ?? [];
     final images = product?.images ?? [];
 
-    return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: const SystemUiOverlayStyle(
-        statusBarColor: Colors.transparent,
-        statusBarIconBrightness: Brightness.dark,
-        statusBarBrightness: Brightness.light,
-      ),
-      child: Scaffold(
-        backgroundColor: Colors.white,
-        body: state.isLoading
-            ? _buildShimmer()
-            : SingleChildScrollView(
+    return PopScope(
+      canPop: !_isGuest,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+        if (_isGuest) {
+          SystemNavigator.pop();
+        }
+      },
+      child: AnnotatedRegion<SystemUiOverlayStyle>(
+        value: const SystemUiOverlayStyle(
+          statusBarColor: Colors.transparent,
+          statusBarIconBrightness: Brightness.dark,
+          statusBarBrightness: Brightness.light,
+        ),
+        child: Scaffold(
+          backgroundColor: Colors.white,
+          body: state.isLoading
+              ? _buildShimmer()
+              : SingleChildScrollView(
           physics: const BouncingScrollPhysics(),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -358,6 +483,34 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                                 images[_currentImageIndex].id,
                       ),
                     ),
+                  
+                  // ── Share Button (Always visible) ──
+                  Positioned(
+                    top: _isOwner ? 100.h : 50.h, // Positioned below delete icon if owner
+                    right: 20.w,
+                    child: GestureDetector(
+                      onTap: _shareProduct,
+                      child: Container(
+                        padding: EdgeInsets.all(10.r),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.9),
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.1),
+                              blurRadius: 8,
+                            )
+                          ],
+                        ),
+                        child: Icon(
+                          Icons.share_outlined,
+                          color: const Color(0xFFFF5722),
+                          size: 20.sp,
+                        ),
+                      ),
+                    ),
+                  ),
+
                   // Dots
                   Positioned(
                     bottom: 20.h,
@@ -389,7 +542,17 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                     top: 50.h,
                     left: 20.w,
                     child: GestureDetector(
-                      onTap: () => Navigator.pop(context),
+                      onTap: () {
+                        if (_isGuest) {
+                          SystemNavigator.pop();
+                        } else {
+                          if (Navigator.canPop(context)) {
+                            Navigator.pop(context);
+                          } else {
+                            context.goNamed(AppRoutes.homeScreen);
+                          }
+                        }
+                      },
                       child: Container(
                         padding: EdgeInsets.all(10.r),
                         decoration: const BoxDecoration(
@@ -551,6 +714,10 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                   sellerName: product?.description ?? '',
                   sellerLocation: product?.location ?? '',
                   onTap: () {
+                    if (_isGuest) {
+                      _showMandatoryLoginDialog();
+                      return;
+                    }
                     ref
                         .read(productDetailProvider.notifier)
                         .trackView(
@@ -619,7 +786,7 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
           ),
         ),
       ),
-    );
+    ));
   }
 
   // ── Image thumbnail with delete ──
@@ -783,21 +950,20 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                         decoration: const BoxDecoration(
                           color: Colors.red,
                           shape: BoxShape.circle,
-                        ),
-                        child: Icon(
-                          Icons.close,
-                          color: Colors.white,
-                          size: 10.sp,
-                        ),
-                      ),
+                    ),
+                    child: Icon(
+                      Icons.close,
+                      color: Colors.white,
+                      size: 10.sp,
                     ),
                   ),
-              ],
+                ),
+              ),
             ],
-          ),
+          ],
         ),
       ),
-    );
+    ));
   }
 
   // ── Delete image button (carousel pe) ──
@@ -1196,3 +1362,4 @@ class _VideoPlayerScreenState extends State<_VideoPlayerScreen> {
     );
   }
 }
+
