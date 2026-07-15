@@ -8,6 +8,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:lootbazarweb/bottomNav/NavBarController.dart';
+import 'package:lootbazarweb/constant/AppToast.dart';
 import 'package:lootbazarweb/core/theme.dart';
 import 'package:lootbazarweb/providerd/CityState.dart';
 import 'package:lootbazarweb/providerd/currantUserListning/CurrentProductNotifier.dart';
@@ -18,8 +19,6 @@ import 'package:lootbazarweb/shared/AppTextStyle.dart';
 import 'package:lootbazarweb/shared/CityPickerSheet.dart';
 import 'package:lootbazarweb/shared/ListingSuccessDialog.dart';
 import 'package:lootbazarweb/shared/PremiumLoadingButton.dart';
-import 'package:lootbazarweb/shared/apply_buttons.dart';
-import 'package:lootbazarweb/shared/main_buttons.dart';
 import 'package:lootbazarweb/shared/my_listing.dart';
 import 'package:lootbazarweb/tool/MyListingShimmer.dart';
 import 'package:lootbazarweb/tool/SwipeButton.dart';
@@ -30,6 +29,8 @@ import 'package:workmanager/workmanager.dart';
 import 'package:confetti/confetti.dart';
 import 'package:lootbazarweb/providerd/di/repositoryProvider.dart';
 import 'package:audioplayers/audioplayers.dart';
+
+final sellScreenImagesProvider = StateProvider<List<XFile>>((ref) => []);
 
 class SellScreen extends ConsumerStatefulWidget {
   const SellScreen({super.key});
@@ -56,8 +57,8 @@ class _SellScreenState extends ConsumerState<SellScreen> {
     [],
   );
 
-  List<String> imagePaths = [];
-  List<XFile> selectedImages = [];
+  List<XFile> get selectedImages => ref.watch(sellScreenImagesProvider);
+  List<String> get imagePaths => selectedImages.map((f) => f.path).toList();
 
   int? paymentStatus;
 
@@ -111,12 +112,7 @@ class _SellScreenState extends ConsumerState<SellScreen> {
   }
 
   void _handlePaymentError(PaymentFailureResponse response) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text("Payment Failed: ${response.message}"),
-        backgroundColor: Colors.red,
-      ),
-    );
+    AppToast.error("Payment Failed: ${response.message}");
   }
 
   void _handleExternalWallet(ExternalWalletResponse response) {}
@@ -137,11 +133,22 @@ class _SellScreenState extends ConsumerState<SellScreen> {
   Future<void> _pickImages() async {
     final picker = ImagePicker();
     try {
-      List<XFile>? pickedFiles = await picker.pickMultiImage(imageQuality: 70);
+      final currentImages = ref.read(sellScreenImagesProvider);
+
+      if (currentImages.length >= 20) {
+        AppToast.info("Maximum 20 photos reached");
+        return;
+      }
+
+      List<XFile>? pickedFiles = await picker.pickMultiImage(
+        imageQuality: 70,
+        limit: 20,
+      );
+
       if (pickedFiles != null && pickedFiles.isNotEmpty) {
-        selectedImages = pickedFiles;
-        imagePaths = pickedFiles.map((f) => f.path).toList();
-        setState(() {});
+        final List<XFile> combined = [...currentImages, ...pickedFiles];
+        // Ensure strictly max 20 images total
+        ref.read(sellScreenImagesProvider.notifier).state = combined.take(20).toList();
       }
     } catch (e) {
       debugPrint('Error picking images: $e');
@@ -222,12 +229,7 @@ class _SellScreenState extends ConsumerState<SellScreen> {
         ref.read(currentProductProvider.notifier).getCurrentUserProducts();
         _clearForm();
       } else if (next.status == ProductStatus.error) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(next.errorMessage ?? 'Something went wrong'),
-            backgroundColor: Colors.red,
-          ),
-        );
+        AppToast.error(next.errorMessage ?? 'Something went wrong');
       }
     });
     return AnnotatedRegion(
@@ -426,11 +428,11 @@ class _SellScreenState extends ConsumerState<SellScreen> {
                                           keyboardType: TextInputType.number,
                                           inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                                           style: TextStyle(fontSize: 14.sp),
-                                          validator: (value) {
+                                          validator: (value) { 
                                             if (value == null || value.isEmpty) return 'Enter MOQ';
                                             final int moq = int.tryParse(value) ?? 0;
                                             final int totalQty = int.tryParse(_pcsController.text) ?? 0;
-                                            if (moq > totalQty) return 'MOQ error';
+                                            if (moq > totalQty) return 'Max: $totalQty Pcs';
                                             return null;
                                           },
                                           decoration: _inputDecoration(hintText: 'MOQ'),
@@ -514,7 +516,7 @@ class _SellScreenState extends ConsumerState<SellScreen> {
                                           await _openBottomSheet();
                                           NavBarController.showNavBar.value = true;
                                         } else {
-                                          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please select images.')));
+                                          AppToast.info('Please select images.');
                                         }
                                       }
                                     },
@@ -541,10 +543,11 @@ class _SellScreenState extends ConsumerState<SellScreen> {
     showDialog(context: context, barrierDismissible: false, builder: (_) => const ListingSuccessDialog());
   }
 
-  Future<void> _validateCoupon() async {
+  Future<void> _validateCoupon({VoidCallback? updateSheet}) async {
     final code = _applyCouponController.text.trim();
     if (code.isEmpty) return;
     setState(() { _isCouponValidating = true; });
+    updateSheet?.call();
     try {
       final repo = ref.read(repositoryProvider);
       final baseAmount = double.tryParse(SharedPrefs().getString(listingAmount) ?? '33.0') ?? 33.0;
@@ -554,11 +557,13 @@ class _SellScreenState extends ConsumerState<SellScreen> {
         _finalAmount = (result['finalAmount'] as num).toDouble();
         _isCouponValidating = false;
       });
+      updateSheet?.call();
       _confettiController.play();
       _audioPlayer.play(AssetSource('tone.mp3'));
     } catch (e) {
       setState(() { _isCouponValidating = false; _couponResult = null; _finalAmount = double.tryParse(SharedPrefs().getString(listingAmount) ?? '33.0') ?? 33.0; });
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString().replaceAll('Exception:', '')), backgroundColor: Colors.red));
+      updateSheet?.call();
+      if (mounted)AppToast.error(e.toString().replaceAll('Exception:', ''));
     }
   }
 
@@ -588,8 +593,23 @@ class _SellScreenState extends ConsumerState<SellScreen> {
       'name': 'LootBazar',
       'description': 'Product Listing Fee',
       'prefill': {'contact': userPhone, 'email': ''},
-      'external': {'wallets': ['paytm']},
-      'notes': {'productId': productId, 'userId': userIdValue}
+      'notes': {'productId': productId, 'userId': userIdValue},
+      'config': {
+        'display': {
+          'blocks': {
+            'upi': {
+              'name': 'UPI Payments Only',
+              'instruments': [
+                {'method': 'upi'}
+              ],
+            },
+          },
+          'sequence': ['block.upi'],
+          'preferences': {
+            'show_default_blocks': false,
+          },
+        },
+      },
     };
     try {
       if (!kIsWeb) {
@@ -609,9 +629,8 @@ class _SellScreenState extends ConsumerState<SellScreen> {
     _phoneController.clear();
     _categoryController.clear();
     _applyCouponController.clear();
+    ref.read(sellScreenImagesProvider.notifier).state = [];
     setState(() {
-      imagePaths = [];
-      selectedImages = [];
       _couponResult = null;
       _finalAmount = double.tryParse(SharedPrefs().getString(listingAmount) ?? '33.0') ?? 33.0;
     });
@@ -625,7 +644,26 @@ class _SellScreenState extends ConsumerState<SellScreen> {
   }
 
   InputDecoration _inputDecoration({required String hintText, Widget? suffixIcon}) {
-    return InputDecoration(filled: true, fillColor: Colors.white, hintText: hintText, hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 13.5.sp), suffixIcon: suffixIcon, isDense: true, contentPadding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 12.h), border: OutlineInputBorder(borderRadius: BorderRadius.circular(10.r), borderSide: BorderSide.none), enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10.r), borderSide: BorderSide.none), focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10.r), borderSide: const BorderSide(color: Color(0xFFFF5216), width: 1.5)), errorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10.r), borderSide: const BorderSide(color: Colors.red, width: 1)));
+    return InputDecoration(
+        filled: true,
+        fillColor: Colors.white,
+        hintText: hintText,
+        hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 13.5.sp),
+        suffixIcon: suffixIcon,
+        isDense: true,
+        errorMaxLines: 1,
+        errorStyle: TextStyle(fontSize: 10.sp, height: 0.8),
+        contentPadding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 12.h),
+        border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(10.r), borderSide: BorderSide.none),
+        enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(10.r), borderSide: BorderSide.none),
+        focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(10.r),
+            borderSide: const BorderSide(color: Color(0xFFFF5216), width: 1.5)),
+        errorBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(10.r),
+            borderSide: const BorderSide(color: Colors.red, width: 1)));
   }
 
   Future<void> _openBottomSheet() async {
@@ -659,10 +697,61 @@ class _SellScreenState extends ConsumerState<SellScreen> {
                                 shrinkWrap: true,
                                 scrollDirection: Axis.horizontal,
                                 gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 2, crossAxisSpacing: 8, mainAxisSpacing: 8, childAspectRatio: 1.0),
-                                itemCount: selectedImages.length,
+                                itemCount: selectedImages.length < 20 ? selectedImages.length + 1 : selectedImages.length,
                                 itemBuilder: (context, index) {
+                                  if (index == selectedImages.length) {
+                                    return GestureDetector(
+                                      onTap: () async {
+                                        await _pickImages();
+                                        setSheetState(() {});
+                                      },
+                                      child: Container(
+                                        decoration: BoxDecoration(
+                                          color: Colors.grey.shade100,
+                                          borderRadius: BorderRadius.circular(10.r),
+                                          border: Border.all(color: Colors.grey.shade300, style: BorderStyle.solid),
+                                        ),
+                                        child: Column(
+                                          mainAxisAlignment: MainAxisAlignment.center,
+                                          children: [
+                                            Icon(Icons.add_a_photo_outlined, color: Colors.grey.shade600, size: 20.sp),
+                                            SizedBox(height: 2.h),
+                                            Text("Add", style: TextStyle(fontSize: 10.sp, color: Colors.grey.shade600)),
+                                          ],
+                                        ),
+                                      ),
+                                    );
+                                  }
                                   final image = selectedImages[index];
-                                  return ClipRRect(borderRadius: BorderRadius.circular(10.r), child: kIsWeb ? Image.network(image.path, fit: BoxFit.cover) : Image.file(File(image.path), fit: BoxFit.cover));
+                                  return Stack(
+                                    children: [
+                                      Positioned.fill(
+                                        child: ClipRRect(
+                                          borderRadius: BorderRadius.circular(10.r),
+                                          child: kIsWeb
+                                              ? Image.network(image.path, fit: BoxFit.cover)
+                                              : Image.file(File(image.path), fit: BoxFit.cover),
+                                        ),
+                                      ),
+                                      Positioned(
+                                        top: 5,
+                                        right: 5,
+                                        child: GestureDetector(
+                                          onTap: () {
+                                            final newList = List<XFile>.from(selectedImages);
+                                            newList.removeAt(index);
+                                            ref.read(sellScreenImagesProvider.notifier).state = newList;
+                                            setSheetState(() {});
+                                          },
+                                          child: Container(
+                                            padding: const EdgeInsets.all(4),
+                                            decoration: const BoxDecoration(color: Colors.black54, shape: BoxShape.circle),
+                                            child: Icon(Icons.close, size: 14.sp, color: Colors.white),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  );
                                 },
                               ),
                             ),
@@ -729,8 +818,7 @@ class _SellScreenState extends ConsumerState<SellScreen> {
                                               height: 44.h,
                                               child: ElevatedButton(
                                                 onPressed: _isCouponValidating ? null : () async {
-                                                  await _validateCoupon();
-                                                  setSheetState(() {}); 
+                                                  await _validateCoupon(updateSheet: () => setSheetState(() {}));
                                                 },
                                                 style: ElevatedButton.styleFrom(backgroundColor: AppTheme.primary, foregroundColor: Colors.white, elevation: 0, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10.r))),
                                                 child: _isCouponValidating 
@@ -836,6 +924,10 @@ class _SellScreenState extends ConsumerState<SellScreen> {
                               amount: _finalAmount,
                               onCall: () async {
                                 FocusScope.of(context).unfocus();
+                                if (selectedImages.length < 2) {
+                                  AppToast.error('At least 2 images are required');
+                                  return;
+                                }
                                 await _callStoreProductApi();
                               },
                             ),

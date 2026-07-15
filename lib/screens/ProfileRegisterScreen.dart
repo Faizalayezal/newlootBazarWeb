@@ -31,7 +31,6 @@ class _ProfileRegisterScreenState extends ConsumerState<ProfileRegisterScreen> {
   final pincodeFocusNode = FocusNode();
 
   File? _pickedImage;
-  bool _showImageError = false;
 
   @override
   void dispose() {
@@ -79,20 +78,6 @@ class _ProfileRegisterScreenState extends ConsumerState<ProfileRegisterScreen> {
   }
 
   void _onSubmitTap() {
-    setState(() {
-      _showImageError = _pickedImage == null;
-    });
-
-    if (_showImageError) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please select a profile image'),
-          backgroundColor: Colors.red,
-        ),
-      );
-      return;
-    }
-
     if (!formKey.currentState!.validate()) return;
     FocusScope.of(context).unfocus();
     ref.read(registerProvider.notifier).localStore(
@@ -146,33 +131,23 @@ class _ProfileRegisterScreenState extends ConsumerState<ProfileRegisterScreen> {
                       child: GestureDetector(
                         onTap: () async {
                           await _pickImage();
-                          if (_pickedImage != null) {
-                            setState(() => _showImageError = false);
-                          }
                         },
                         child: Stack(
                           children: [
                             Container(
-                              decoration: BoxDecoration(
+                              decoration: const BoxDecoration(
                                 shape: BoxShape.circle,
-                                border: _showImageError
-                                    ? Border.all(color: Colors.red, width: 2)
-                                    : null,
                               ),
                               child: CircleAvatar(
                                 radius: 55.r,
-                                backgroundColor: _showImageError
-                                    ? Colors.red.withOpacity(0.1)
-                                    : Colors.orange.withOpacity(0.1),
+                                backgroundColor: Colors.orange.withOpacity(0.1),
                                 backgroundImage: _pickedImage != null
                                     ? FileImage(_pickedImage!)
                                     : null,
                                 child: _pickedImage == null
                                     ? Icon(Icons.person,
                                         size: 50.sp,
-                                        color: _showImageError
-                                            ? Colors.red
-                                            : Colors.orange)
+                                        color: Colors.orange)
                                     : null,
                               ),
                             ),

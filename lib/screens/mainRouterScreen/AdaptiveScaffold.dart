@@ -71,23 +71,14 @@ class AdaptiveScaffold extends ConsumerWidget {
                   Expanded(child: navigationShell),
                 ],
               ),
-              bottomNavigationBar:/* useRail
-                  ? null
-                  :*/ ValueListenableBuilder<bool>(
+              bottomNavigationBar: ValueListenableBuilder<bool>(
                       valueListenable: NavBarController.showNavBar,
                       builder: (context, visible, child) {
-                        return AnimatedContainer(
-                          color: Colors.transparent,
-                          duration: const Duration(milliseconds: 350),
-                          curve: Curves.easeOutCubic,
-                          height: visible ? 80.h : 0,
-                          child: ClipRect(
-                            child: Align(
-                              alignment: Alignment.bottomCenter,
-                              heightFactor: visible ? 1 : 0,
-                              child: child,
-                            ),
-                          ),
+                        return AnimatedSlide(
+                          offset: visible ? Offset.zero : const Offset(0, 1.2),
+                          duration: const Duration(milliseconds: 400),
+                          curve: Curves.easeInOutCubic,
+                          child: child!,
                         );
                       },
                       child: CustomBottomNavBar(
@@ -102,7 +93,6 @@ class AdaptiveScaffold extends ConsumerWidget {
                           if (navigationShell.currentIndex == 1) {
                             await ref.read(productProvider.notifier).resetSearch();
                           }
-
                         },
                       ),
                     ),

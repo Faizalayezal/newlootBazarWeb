@@ -14,8 +14,13 @@ class DioHelper {
 
   String _extractError(DioException e) {
     final data = e.response?.data;
-    if (data is Map<String, dynamic> && data['message'] != null) {
-      return data['message'].toString();
+    if (data is Map<String, dynamic>) {
+      if (data['message'] != null) {
+        return data['message'].toString();
+      }
+      if (data['error'] != null) {
+        return data['error'].toString();
+      }
     }
     if (data is String && data.isNotEmpty) return data;
     return e.message ?? "Something went wrong";

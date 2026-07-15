@@ -32,13 +32,21 @@ class RegisterNotifier extends StateNotifier<RegisterState> {
       await _prefs.setString(phoneNumber, mobileNo);
 
       state = state.copyWith(isLoading: false, isSuccess: true, data: response);
-    } catch (e,s) {
-      debugPrint('Error picking images---36: $e');
-      debugPrint('Error picking images---37: $s');
+    } catch (e, s) {
+      debugPrint('Error during registration---36: $e');
+      debugPrint('Stack trace---37: $s');
+      
+      String message = e.toString().replaceAll('Exception: ', '');
+      
+      // Handle specific technical error messages
+      if (message.contains('mobileno') && message.contains('invalid')) {
+        message = 'Invalid mobile number. Please check and try again.';
+      }
+
       state = state.copyWith(
         isLoading: false,
         isSuccess: false,
-        errorMessage: e.toString(),
+        errorMessage: message,
       );
     }
   }
@@ -88,7 +96,7 @@ class RegisterNotifier extends StateNotifier<RegisterState> {
     try {
       final isProfileCompleted =
           await (_prefs.getString(userId)?.isNotEmpty ?? false) &&
-          (_prefs.getString(profileImage)?.isNotEmpty ?? false) &&
+         // (_prefs.getString(profileImage)?.isNotEmpty ?? false) &&
           (_prefs.getString(address)?.isNotEmpty ?? false) &&
           (_prefs.getString(name)?.isNotEmpty ?? false) &&
           (_prefs.getString(pincode)?.isNotEmpty ?? false) &&
@@ -158,7 +166,12 @@ class RegisterNotifier extends StateNotifier<RegisterState> {
           ? List<String>.from(jsonDecode(interestsJson))
           : [];
 
-      final image = newImage ?? ( _prefs.getString(profileImage) != null ? XFile(_prefs.getString(profileImage)!) : null);
+      final currentImagePath = _prefs.getString(profileImage) ?? "";
+      final bool isLocalFile = currentImagePath.isNotEmpty &&
+          !currentImagePath.startsWith('http') &&
+          !currentImagePath.startsWith('https');
+
+      final image = newImage ?? (isLocalFile ? XFile(currentImagePath) : null);
 
       final request = UpdateProfileRequest(
         name: nameValue,
@@ -190,10 +203,11 @@ class RegisterNotifier extends StateNotifier<RegisterState> {
         userData: response,
       );
     } catch (e) {
+      String message = e.toString().replaceAll('Exception: ', '');
       state = state.copyWith(
         isLoading: false,
         isSuccess: false,
-        errorMessage: e.toString(),
+        errorMessage: message,
       );
     }
   }

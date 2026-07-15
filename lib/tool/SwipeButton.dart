@@ -86,6 +86,12 @@ class _SwipeButtonState extends State<SwipeButton>
     setState(() => _isProcessing = true);
     _spinController.repeat();
     await widget.onCall?.call();
+    if (mounted && !widget.isApiLoading) {
+      _spinController.stop();
+      _spinController.reset();
+      _snapBack();
+      setState(() => _isProcessing = false);
+    }
   }
 
   bool get _isFree => (widget.status == 200 && widget.isChecked == true) || (widget.amount != null && widget.amount == 0);
@@ -119,7 +125,7 @@ class _SwipeButtonState extends State<SwipeButton>
             onHorizontalDragEnd: _isProcessing
                 ? null
                 : (d) async {
-              if (_dragX >= maxDrag * 0.75) {
+              if (_dragX >= maxDrag * 0.9) {
                 await _triggerPayment();
               } else {
                 _snapBack();

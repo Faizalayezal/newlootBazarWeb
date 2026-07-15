@@ -122,11 +122,11 @@ class _AnimatedCategoryCardState extends State<AnimatedCategoryCard>
                       child: Align(
                         alignment: Alignment.centerLeft,
                         child: Text(
-                          widget.title,
+                          widget.title.replaceAll(' & ', ' &\n'),
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                           style: AppTextStyle.italic(
-                            size: 11.sp,
+                            size: 12.sp,
                             color: const Color(0xFF4A2C2C), // Dark brownish text matching image
                             height: 1.1,
                           ),

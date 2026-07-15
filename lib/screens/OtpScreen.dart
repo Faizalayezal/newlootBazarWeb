@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
+import 'package:lootbazarweb/constant/AppToast.dart';
 import 'package:lootbazarweb/core/theme.dart';
 import 'package:lootbazarweb/providerd/di/sharedPrefsProvider.dart';
 import 'package:lootbazarweb/providerd/otp/OtpNotifier.dart';
@@ -129,10 +130,7 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
   Widget build(BuildContext context) {
     ref.listen<OtpState>(otpProvider, (previous, next) {
       if (next.errorMessage != null) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(next.errorMessage!)));
-
+        AppToast.error(next.errorMessage??'');
         return;
       }
       if (!next.isSuccess) return;
@@ -235,24 +233,26 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
                       builder: (context, resend, child) {
                         /// SHOW RESEND
                         if (resend) {
-                          return GestureDetector(
-                            onTap: () async {
-                              /// RESET TIMER
-                              FocusScope.of(context).unfocus();
-                              await ref.read(otpProvider.notifier).requestOtp();
-                              seconds.value = 60;
-
-                              showResend.value = false;
-
-                              startTimer();
-                            },
-
-                            child: Text(
-                              'Resend OTP',
-                              textAlign: TextAlign.center,
-                              style: AppTextStyle.semiBold(
-                                size: 13.sp,
-                                color: AppTheme.primary,
+                          return Center(
+                            child: GestureDetector(
+                              onTap: () async {
+                                /// RESET TIMER
+                                FocusScope.of(context).unfocus();
+                                await ref.read(otpProvider.notifier).requestOtp();
+                                seconds.value = 60;
+    
+                                showResend.value = false;
+    
+                                startTimer();
+                              },
+    
+                              child: Text(
+                                'Resend OTP',
+                                textAlign: TextAlign.center,
+                                style: AppTextStyle.semiBold(
+                                  size: 13.sp,
+                                  color: AppTheme.primary,
+                                ),
                               ),
                             ),
                           );
