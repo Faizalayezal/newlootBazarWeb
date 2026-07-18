@@ -9,7 +9,6 @@ class PremiumLoadingButton extends StatelessWidget {
   final VoidCallback? onTap;
   final String label;
   final String iconAsset;
-
   const PremiumLoadingButton({
     super.key,
     required this.isLoading,
@@ -27,7 +26,6 @@ class PremiumLoadingButton extends StatelessWidget {
         builder: (context, constraints) {
           final double fullWidth = constraints.maxWidth;
           final double collapsedSize = 54.h;
-
           return GestureDetector(
             onTap: isLoading ? null : onTap,
             child: Align(
@@ -51,6 +49,8 @@ class PremiumLoadingButton extends StatelessWidget {
                     ),
                   ],
                 ),
+                // Clip so any partially-collapsed content never paints outside
+                clipBehavior: Clip.antiAlias,
                 child: AnimatedSwitcher(
                   duration: const Duration(milliseconds: 200),
                   switchInCurve: Curves.easeOut,
@@ -77,16 +77,21 @@ class PremiumLoadingButton extends StatelessWidget {
                     key: const ValueKey('content'),
                     padding: EdgeInsets.symmetric(horizontal: 20.w),
                     child: Row(
-                      mainAxisAlignment:
-                      MainAxisAlignment.spaceBetween,
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text(
-                          label,
-                          style: AppTextStyle.semiBold(
-                            size: 16.sp,
-                            color: Colors.white,
+                        // Flexible + ellipsis so it shrinks instead of overflowing
+                        Flexible(
+                          child: Text(
+                            label,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: AppTextStyle.semiBold(
+                              size: 16.sp,
+                              color: Colors.white,
+                            ),
                           ),
                         ),
+                        const SizedBox(width: 8),
                         SvgPicture.asset(
                           iconAsset,
                           width: 28.w,

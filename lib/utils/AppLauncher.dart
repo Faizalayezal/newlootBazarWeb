@@ -1,4 +1,4 @@
-import 'package:flutter/cupertino.dart';
+import 'package:flutter/foundation.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class AppLauncher {
@@ -11,13 +11,23 @@ class AppLauncher {
       formattedPhone = '91$formattedPhone';
     }
 
-    // Bypass canLaunchUrl to avoid persistent channel errors on some Android setups
+    if (kIsWeb) {
+      // For Web: Use wa.me link which automatically opens in a new tab
+      final Uri webUri = Uri.parse('https://wa.me/$formattedPhone');
+      try {
+        await launchUrl(webUri, mode: LaunchMode.externalApplication);
+      } catch (e) {
+        debugPrint('WhatsApp Web Launch Error: $e');
+      }
+      return;
+    }
+
+    // For Mobile (Android/iOS)
     final Uri whatsappUri = Uri.parse('whatsapp://send?phone=$formattedPhone');
     final Uri webUri = Uri.parse('https://wa.me/$formattedPhone');
 
     try {
       debugPrint('Attempting to launch WhatsApp: $whatsappUri');
-      // On some platforms, launchUrl itself might trigger the channel error
       final bool launched = await launchUrl(whatsappUri, mode: LaunchMode.externalApplication);
       
       if (!launched) {
@@ -26,8 +36,6 @@ class AppLauncher {
       }
     } catch (e) {
       debugPrint('WhatsApp Launch Exception: $e');
-      
-      // If direct launch fails or channel is missing, always try the universal web link
       try {
         await launchUrl(webUri, mode: LaunchMode.externalApplication);
       } catch (innerError) {

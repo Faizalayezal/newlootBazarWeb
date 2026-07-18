@@ -5,7 +5,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:lootbazarweb/core/theme.dart';
 import 'package:lootbazarweb/shared/AppTextStyle.dart';
 
-class MyListing extends StatelessWidget {
+class MyListing extends StatefulWidget {
   const MyListing({
     super.key,
     required this.onTap,
@@ -28,18 +28,23 @@ class MyListing extends StatelessWidget {
   final String status;
 
   @override
-  Widget build(BuildContext context) {
-    // Determine colors based on status matching the UI exactly
-    final bool isActive = status.toLowerCase() == 'active';
+  State<MyListing> createState() => _MyListingState();
+}
 
-    final String statusIcon = isActive
-        ? 'assets/images/active.svg'
-        : 'assets/images/expir.svg';
+class _MyListingState extends State<MyListing> {
+
+  bool _isTablet(BuildContext context) {
+    final width = MediaQuery.of(context).size.width;
+    return width >= 600;
+  }
+  @override
+  Widget build(BuildContext context) {
+    final bool tablet = _isTablet(context);
 
     return Padding(
       padding: EdgeInsets.only(bottom: 12.h),
       child: GestureDetector(
-        onTap: onTap,
+        onTap: widget.onTap,
         child: Container(
           decoration: BoxDecoration(
             color: AppTheme.card,
@@ -52,17 +57,16 @@ class MyListing extends StatelessWidget {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              // Left Image with ClipRRect
               ClipRRect(
                 borderRadius: BorderRadius.only(
                   topLeft: Radius.circular(11.r),
                   bottomLeft: Radius.circular(11.r),
                 ),
                 child: CachedNetworkImage(
-                  height: 98.h,
-                  width: 90.w,
+                  height: tablet ? 120.h : 98.h,
+                  width: tablet ? 80.w : 90.w,
                   fit: BoxFit.cover,
-                  imageUrl: imageUrl ?? '',
+                  imageUrl: widget.imageUrl ?? '',
                   placeholder: (context, url) => Container(
                     color: const Color(0xFFFCE9DF),
                     child: Center(
@@ -103,7 +107,7 @@ class MyListing extends StatelessWidget {
                           Padding(
                             padding: EdgeInsets.only(right: 54.w),
                             child: Text(
-                              title ?? 'Product Title',
+                              widget.title ?? 'Product Title',
                               maxLines: 2,
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(
@@ -124,10 +128,10 @@ class MyListing extends StatelessWidget {
                               spacing: 20.w,
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                _buildSpecItem("₹ $rate", "Rate"),
-                                _buildSpecItem(pcs ?? '0', "Quantity"),
-                                _buildSpecItem(moq ?? '0', "MOQ"),
-                                _buildSpecItem(location ?? '-', "Location"),
+                                _buildSpecItem("₹ ${widget.rate}", "Rate"),
+                                _buildSpecItem(widget.pcs ?? '0', "Quantity"),
+                                _buildSpecItem(widget.moq ?? '0', "MOQ"),
+                                _buildSpecItem(widget.location ?? '-', "Location"),
                               ],
                             ),
                           ),
@@ -138,11 +142,7 @@ class MyListing extends StatelessWidget {
                       Positioned(
                         top: -2.h,
                         right: 0,
-                        child: SvgPicture.asset(
-                          statusIcon,
-                          width: 14.w,
-                          height: 14.h,
-                        ),
+                        child: _buildStatusBadge(widget.status),
                       ),
                     ],
                   ),
@@ -150,6 +150,51 @@ class MyListing extends StatelessWidget {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStatusBadge(String status) {
+    Color bgColor;
+    String label = status;
+
+    switch (status.toLowerCase()) {
+      case 'active':
+        bgColor = Colors.green;
+        label = "Active";
+        break;
+      case 'pending':
+        bgColor = const Color(0xFFFFB800);
+        label = "Pending";
+        break;
+      case 'cancel':
+      case 'cancelled':
+        bgColor = Colors.red;
+        label = "Cancelled";
+        break;
+      case 'expired':
+      case 'inactive':
+      default:
+        bgColor = Colors.grey;
+        label = status.isNotEmpty ? status[0].toUpperCase() + status.substring(1).toLowerCase() : "";
+        break;
+    }
+
+    return Container(
+      padding: EdgeInsets.symmetric(
+        horizontal: 8.w,
+        vertical: 2.h,
+      ),
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(4.r),
+      ),
+      child: Text(
+        label,
+        style: AppTextStyle.bold(
+          size: 10.sp,
+          color: Colors.white,
         ),
       ),
     );

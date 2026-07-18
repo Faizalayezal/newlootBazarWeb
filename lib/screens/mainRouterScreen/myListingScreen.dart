@@ -135,7 +135,11 @@ class _MyListingScreenState extends ConsumerState<MyListingScreen> {
                           pcs: product.stock.toString(),
                           moq: product.moq.toString(),
                           location: product.location ?? '-',
-                          status: product.status,
+                          status: product.paymentStatus.toLowerCase() == 'pending'
+                              ? 'Pending'
+                              : product.paymentStatus.toLowerCase() == 'cancel'
+                                  ? 'Cancelled'
+                                  : product.status,
                         );
                       },
                     ),

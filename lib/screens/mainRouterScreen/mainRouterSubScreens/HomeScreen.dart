@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:lootbazarweb/bottomNav/NavBarController.dart';
 import 'package:lootbazarweb/core/theme.dart';
 import 'package:lootbazarweb/providerd/Products/ProductNotifier.dart';
@@ -274,11 +275,84 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               ),
 
               SliverPadding(
-                padding: EdgeInsets.only(bottom: 80.h, right: 40.w),
+                padding: EdgeInsets.only(bottom: 80.h),
                 sliver: SliverToBoxAdapter(
                   child: Visibility(
                     visible: productState.products.isNotEmpty,
-                    child: Image.asset('assets/madelogo.png'),
+                    child: Center(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Made',
+                            style: GoogleFonts.baloo2(
+                              fontSize: 65.sp,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.grey.shade300,
+                              height: 1,
+                            ),
+                          ),
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            children: [
+                              Text(
+                                'with ',
+                                style: GoogleFonts.baloo2(
+                                  fontSize: 55.sp,
+                                  fontWeight: FontWeight.w700,
+                                  color: Colors.grey.shade300,
+                                ),
+                              ),
+                              Opacity(
+                                opacity: 0.7,
+                                child: Text(
+                                  '❤️',
+                                  style: TextStyle(fontSize: 60.sp),
+                                ),
+                              ),
+                            ],
+                          ),
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            children: [
+                              Text(
+                                'By',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 13.sp,
+                                  color: Colors.grey.shade400,
+                                  height: 1,
+                                ),
+                              ),
+                              SizedBox(width: 2.w),
+                              ClipRRect(
+                                child: Align(
+                                  alignment: Alignment.center,
+                                  widthFactor: 1,
+                                  heightFactor: 1,
+                                  child: Image.asset(
+                                    "assets/insalogo.png",
+                                    height: 35.h,
+                                    width: 35.w,
+                                    fit: BoxFit.contain,
+                                  ),
+                                ),
+                              ),
+                              SizedBox(width: 2.w),
+                              Text(
+                                'Insha Softcon',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 13.sp,
+                                  color: Colors.grey.shade400,
+                                  height: 1,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
                 ),
               ),

@@ -87,7 +87,7 @@ class EnquiryList extends StatelessWidget {
               GestureDetector(
                 onTap: () {
                   AppLauncher.openWhatsApp(
-                    phone: '7016685053',
+                    phone: entry?.phoneNumber??'',
                   );
                 },
                 child: Container(
@@ -102,7 +102,7 @@ class EnquiryList extends StatelessWidget {
                         "assets/images/chaticon.png",
                         height: 18.h,
                         width: 18.w,
-                        fit: BoxFit.cover,
+                        fit: BoxFit.scaleDown,
                       ),
                       SizedBox(width: 4.w),
                       Text(
@@ -172,9 +172,9 @@ class WhatsappBusinessCard extends StatelessWidget {
                   children: [
                     Image.asset(
                       "assets/images/chaticon.png",
-                      height: 28.h,
-                      width: 28.w,
-                      fit: BoxFit.cover,
+                      height: 40.h,
+                      width: 40.w,
+                      fit: BoxFit.scaleDown,
                     ),
                     SizedBox(height: 4.h),
                     Text(

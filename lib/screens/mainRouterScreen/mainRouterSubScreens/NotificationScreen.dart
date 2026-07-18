@@ -143,9 +143,9 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
     return Stack(
       children: [
         Padding(
-          padding: EdgeInsets.symmetric(horizontal: 3.w,vertical: 8.h),
+          padding: EdgeInsets.symmetric(horizontal: 3.w, vertical: 8.h),
           child: Container(
-            height: 94.h,
+            constraints: BoxConstraints(minHeight: 60.h),
             decoration: BoxDecoration(
               color: AppTheme.card,
               borderRadius: BorderRadius.all(Radius.circular(10.r)),
@@ -160,31 +160,25 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
                 // ── Product image ──────────────────────────────────────────────
                 ClipRRect(
                   borderRadius: BorderRadius.circular(10.r),
-                  child: imageUrl.isNotEmpty
-                      ? CachedNetworkImage(
-                    imageUrl: imageUrl,
-                    height: 94.h,
-                    width: 90.w,
-                    fit: BoxFit.cover,
-                    placeholder: (_, __) => Container(
-                      height: 94.h,
-                      width: 90.w,
-                      color: Colors.grey[200],
-                    ),
-                    errorWidget: (_, __, ___) => Container(
-                      height: 94.h,
-                      width: 90.w,
-                      color: Colors.grey[200],
-                      child: Icon(Icons.image_not_supported,
-                          size: 20, color: Colors.grey[400]),
-                    ),
-                  )
-                      : Container(
-                    height: 94.h,
-                    width: 90.w,
-                    color: Colors.grey[200],
-                    child: Icon(Icons.inventory_2_outlined,
-                        size: 24, color: Colors.grey[400]),
+                  child: Container(
+                    width: 70.w,
+                    height: 120.h,
+                    color: Colors.grey[100],
+                    child: imageUrl.isNotEmpty
+                        ? CachedNetworkImage(
+                            imageUrl: imageUrl,
+                            fit: BoxFit.cover,
+                            placeholder: (_, __) => Container(
+                              color: Colors.grey[200],
+                            ),
+                            errorWidget: (_, __, ___) => Container(
+                              color: Colors.grey[200],
+                              child: Icon(Icons.image_not_supported,
+                                  size: 20, color: Colors.grey[400]),
+                            ),
+                          )
+                        : Icon(Icons.inventory_2_outlined,
+                                size: 24, color: Colors.grey[400]),
                   ),
                 ),
                 SizedBox(width: 12.w),
@@ -192,8 +186,9 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
                 // ── Text content ───────────────────────────────────────────────
                 Expanded(
                   child: Padding(
-                    padding: EdgeInsets.only(top: 5.h,bottom: 2.h,right: 10.w),
+                    padding: EdgeInsets.only(top: 6.h, bottom: 6.h, right: 10.w),
                     child: Column(
+                      mainAxisSize: MainAxisSize.min,
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         // Type badge + time
@@ -340,7 +335,7 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
                     "assets/images/chaticon.png",
                     height: 16.h,
                     width: 16.w,
-                    fit: BoxFit.cover,
+                    fit: BoxFit.scaleDown,
                   ),
                   SizedBox(width: 2.w),
                   Text(

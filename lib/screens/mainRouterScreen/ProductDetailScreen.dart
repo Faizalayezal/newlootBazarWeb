@@ -474,7 +474,7 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                   // ── Owner hone par image pe delete button ──
                   if (_isOwner && images.isNotEmpty)
                     Positioned(
-                      top: 50.h,
+                      top: 45.h,
                       right: 20.w,
                       child: _buildDeleteImageButton(
                         imageId: images[_currentImageIndex].id,
@@ -486,7 +486,7 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                   
                   // ── Share Button (Always visible) ──
                   Positioned(
-                    top: _isOwner ? 100.h : 50.h, // Positioned below delete icon if owner
+                    top: (_isOwner && images.isNotEmpty) ? 95.h : 45.h,
                     right: 20.w,
                     child: GestureDetector(
                       onTap: _shareProduct,
@@ -505,7 +505,7 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                         child: Icon(
                           Icons.share_outlined,
                           color: const Color(0xFFFF5722),
-                          size: 20.sp,
+                          size: 18.sp,
                         ),
                       ),
                     ),
@@ -539,7 +539,7 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                   ),
                   // Back button
                   Positioned(
-                    top: 50.h,
+                    top: 45.h,
                     left: 20.w,
                     child: GestureDetector(
                       onTap: () {

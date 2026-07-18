@@ -33,7 +33,6 @@ class _SwipeButtonState extends State<SwipeButton>
   double _dragX = 0;
   double _trackWidth = 0;
 
-  // thumb size + padding — must match build()
   static const double _thumbSize = 44;
   static const double _pad = 6;
 
@@ -81,6 +80,11 @@ class _SwipeButtonState extends State<SwipeButton>
     _snapController.forward(from: 0);
   }
 
+  double responsiveHeight(BuildContext context, double value, {double? tabletValue}) {
+    final isTablet = MediaQuery.of(context).size.shortestSide >= 600;
+    return isTablet ? (tabletValue ?? value) : value;
+  }
+
   Future<void> _triggerPayment() async {
     if (_isProcessing || widget.isApiLoading) return;
     setState(() => _isProcessing = true);
@@ -125,7 +129,7 @@ class _SwipeButtonState extends State<SwipeButton>
             onHorizontalDragEnd: _isProcessing
                 ? null
                 : (d) async {
-              if (_dragX >= maxDrag * 0.9) {
+              if (_dragX >= maxDrag * 1.0) {
                 await _triggerPayment();
               } else {
                 _snapBack();
@@ -133,7 +137,7 @@ class _SwipeButtonState extends State<SwipeButton>
             },
             child: SizedBox(
               width: trackW,
-              height: 56.h,
+              height: responsiveHeight(context, 56.h, tabletValue: 60.h),
               child: Stack(
                 children: [
                   // Track background

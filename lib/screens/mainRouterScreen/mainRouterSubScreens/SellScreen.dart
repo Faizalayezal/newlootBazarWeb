@@ -21,6 +21,7 @@ import 'package:lootbazarweb/shared/ListingSuccessDialog.dart';
 import 'package:lootbazarweb/shared/PremiumLoadingButton.dart';
 import 'package:lootbazarweb/shared/my_listing.dart';
 import 'package:lootbazarweb/tool/MyListingShimmer.dart';
+import 'package:lootbazarweb/tool/RazorpayService.dart';
 import 'package:lootbazarweb/tool/SwipeButton.dart';
 import 'package:lootbazarweb/utils/preferences.dart';
 import 'package:lootbazarweb/utils/preferences_key.dart';
@@ -64,7 +65,8 @@ class _SellScreenState extends ConsumerState<SellScreen> {
 
   GlobalKey<FormState> mFormKey = GlobalKey<FormState>();
 
-  late Razorpay _razorpay;
+ // late Razorpay _razorpay;
+  late final RazorpayService _paymentService;
   String? _currentProductId;
 
   late ConfettiController _confettiController;
@@ -76,10 +78,19 @@ class _SellScreenState extends ConsumerState<SellScreen> {
   @override
   void initState() {
     super.initState();
-    _razorpay = Razorpay();
-    _razorpay.on(Razorpay.EVENT_PAYMENT_SUCCESS, _handlePaymentSuccess);
-    _razorpay.on(Razorpay.EVENT_PAYMENT_ERROR, _handlePaymentError);
-    _razorpay.on(Razorpay.EVENT_EXTERNAL_WALLET, _handleExternalWallet);
+   // _razorpay = Razorpay();
+    //_razorpay.on(Razorpay.EVENT_PAYMENT_SUCCESS, _handlePaymentSuccess);
+    //_razorpay.on(Razorpay.EVENT_PAYMENT_ERROR, _handlePaymentError);
+    //_razorpay.on(Razorpay.EVENT_EXTERNAL_WALLET, _handleExternalWallet);
+    _paymentService = RazorpayService();
+    _paymentService.init(
+      onSuccess: _handlePaymentSuccess,
+      onError: _handlePaymentError,
+      onExternalWallet: (response) {
+        debugPrint("External wallet: ${response.walletName}");
+      },
+    );
+
 
     _confettiController = ConfettiController(duration: const Duration(seconds: 3));
 
@@ -100,12 +111,11 @@ class _SellScreenState extends ConsumerState<SellScreen> {
 
   void _handlePaymentSuccess(PaymentSuccessResponse response) async {
     if (_currentProductId != null) {
-      final String userIdValue = SharedPrefs().getString(userId) ?? '';
       await ref.read(storeProductProvider.notifier).updatePaymentStatus(
-            productId: _currentProductId!,
-            userId: userIdValue,
-            paymentStatus: 'paid',
-          );
+        productId: _currentProductId!,
+        userId: SharedPrefs().getString(userId) ?? '',
+        paymentStatus: 'paid',
+      );
       _showSuccessDialog();
       _clearForm();
     }
@@ -113,6 +123,18 @@ class _SellScreenState extends ConsumerState<SellScreen> {
 
   void _handlePaymentError(PaymentFailureResponse response) {
     AppToast.error("Payment Failed: ${response.message}");
+  }
+
+  void _onWebPaymentSuccess(String paymentId) async {
+    if (_currentProductId != null) {
+      await ref.read(storeProductProvider.notifier).updatePaymentStatus(
+        productId: _currentProductId!,
+        userId: SharedPrefs().getString(userId) ?? '',
+        paymentStatus: 'paid',
+      );
+      _showSuccessDialog();
+      _clearForm();
+    }
   }
 
   void _handleExternalWallet(ExternalWalletResponse response) {}
@@ -196,7 +218,8 @@ class _SellScreenState extends ConsumerState<SellScreen> {
 
   @override
   void dispose() {
-    _razorpay.clear();
+   // _razorpay.clear();
+    _paymentService.dispose();
     _confettiController.dispose();
     _audioPlayer.dispose();
     _categoryController.dispose();
@@ -307,7 +330,8 @@ class _SellScreenState extends ConsumerState<SellScreen> {
                               final product = products[index];
                               return MyListing(
                                 onTap: () {
-                                  context.pushNamed(AppRoutes.productDetail, extra: {'productId': product.id});
+                                  context.pushNamed(AppRoutes.productDetail,
+                                      extra: {'productId': product.id});
                                 },
                                 imageUrl: product.firstImageUrl,
                                 title: product.title,
@@ -315,7 +339,11 @@ class _SellScreenState extends ConsumerState<SellScreen> {
                                 pcs: product.stock.toString(),
                                 moq: product.moq.toString(),
                                 location: product.location ?? '-',
-                                status: product.status,
+                                status: product.paymentStatus.toLowerCase() == 'pending'
+                                    ? 'Pending'
+                                    : product.paymentStatus.toLowerCase() == 'cancel'
+                                        ? 'Cancelled'
+                                        : product.status,
                               );
                             },
                           ),
@@ -582,11 +610,16 @@ class _SellScreenState extends ConsumerState<SellScreen> {
     final String rzpKey = SharedPrefs().getString(razorpayKey) ?? 'rzp_test_T8wMbzaBD7SRid';
 
     if (_finalAmount == 0) {
-      await ref.read(storeProductProvider.notifier).updatePaymentStatus(productId: productId, userId: userIdValue, paymentStatus: 'paid');
+      await ref.read(storeProductProvider.notifier).updatePaymentStatus(
+        productId: productId,
+        userId: userIdValue,
+        paymentStatus: 'paid',
+      );
       _showSuccessDialog();
       _clearForm();
       return;
     }
+
     var options = {
       'key': rzpKey,
       'amount': (_finalAmount * 100).toInt(),
@@ -605,19 +638,37 @@ class _SellScreenState extends ConsumerState<SellScreen> {
             },
           },
           'sequence': ['block.upi'],
-          'preferences': {
-            'show_default_blocks': false,
-          },
+          'preferences': {'show_default_blocks': false},
         },
       },
     };
+
     try {
       if (!kIsWeb) {
-        await Workmanager().registerOneOffTask("payment_status_$productId", "updatePaymentStatusTask", inputData: {'productId': productId, 'userId': userIdValue}, initialDelay: const Duration(minutes: 5), constraints: Constraints(networkType: NetworkType.connected));
+        await Workmanager().registerOneOffTask(
+          "payment_status_$productId",
+          "updatePaymentStatusTask",
+          inputData: {'productId': productId, 'userId': userIdValue},
+          initialDelay: const Duration(minutes: 5),
+          constraints: Constraints(networkType: NetworkType.connected),
+        );
       }
-      _razorpay.open(options);
-    } catch (e) { debugPrint("Razorpay Error: $e"); }
+
+      _paymentService.open(
+        options,
+        onWebSuccess: (response) {
+          // Web success response se manually PaymentSuccessResponse jaisa flow trigger karo
+          _onWebPaymentSuccess(response['razorpay_payment_id']);
+        },
+        onWebError: (message) {
+          AppToast.error(message);
+        },
+      );
+    } catch (e) {
+      debugPrint("Razorpay Error: $e");
+    }
   }
+
 
   void _clearForm() {
     _titleController.clear();
@@ -876,7 +927,7 @@ class _SellScreenState extends ConsumerState<SellScreen> {
                     Positioned(
                       bottom: 0, left: 0, right: 0,
                       child: Container(
-                        padding: EdgeInsets.fromLTRB(16.w, 16.h, 16.w, MediaQuery.of(context).padding.bottom + 16.h),
+                        padding: EdgeInsets.fromLTRB(16.w, 16.h, 16.w,16.h),
                         decoration: BoxDecoration(
                           color: Colors.white,
                           borderRadius: BorderRadius.vertical(top: Radius.circular(25.r)),
@@ -916,7 +967,7 @@ class _SellScreenState extends ConsumerState<SellScreen> {
                                 ),
                               ],
                             ),
-                            SizedBox(height: 20.h),
+                            SizedBox(height: 30.h),
                             SwipeButton(
                               isChecked: _isChecked.value,
                               status: paymentStatus,

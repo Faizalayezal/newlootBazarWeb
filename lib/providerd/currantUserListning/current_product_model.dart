@@ -29,6 +29,7 @@ class CurrentProductData {
   final int moq;
   final String? location;
   final String phoneNumber;
+  final String paymentStatus;
   final List<CurrentProductImage> images;
   final String status;
   final String createdAt;
@@ -44,6 +45,7 @@ class CurrentProductData {
     required this.moq,
     this.location,
     required this.phoneNumber,
+    required this.paymentStatus,
     required this.images,
     required this.status,
     required this.createdAt,
@@ -61,6 +63,7 @@ class CurrentProductData {
       moq: json['moq'] ?? 0,
       location: json['location'],
       phoneNumber: json['phoneNumber'] ?? '',
+      paymentStatus: json['paymentStatus'] ?? '',
       images: (json['images'] as List<dynamic>?)
           ?.map((e) => CurrentProductImage.fromJson(e))
           .toList() ??

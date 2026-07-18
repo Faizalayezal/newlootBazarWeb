@@ -38,6 +38,7 @@ class ProductViewer {
   final String name;
   final String address;
   final String time;
+  final String phoneNumber;
   final String type;
 
   ProductViewer({
@@ -45,6 +46,7 @@ class ProductViewer {
     required this.name,
     required this.address,
     required this.time,
+    required this.phoneNumber,
     required this.type,
   });
 
@@ -55,6 +57,7 @@ class ProductViewer {
       address: json['address'] ?? '',
       time: json['time'] ?? '',
       type: json['type'] ?? '',
+      phoneNumber: json['phoneNumber'] ?? '',
     );
   }
 }

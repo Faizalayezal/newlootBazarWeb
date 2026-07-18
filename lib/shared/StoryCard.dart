@@ -51,7 +51,7 @@ class StoryCard extends StatelessWidget {
               width: 90.w,
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(15.r),
-                color: AppTheme.primary, // Card background color from image
+                color: AppTheme.primary,
               ),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(15.r),

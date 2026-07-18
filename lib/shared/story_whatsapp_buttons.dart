@@ -58,7 +58,7 @@ class StoryWhatsappButtons extends StatelessWidget {
                     "assets/images/chaticon.png",
                     height: 30.h,
                     width: 30.w,
-                    fit: BoxFit.cover,
+                    fit: BoxFit.scaleDown,
                   ),
                   SizedBox(height: 2.h),
                   Text(

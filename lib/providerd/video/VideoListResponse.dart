@@ -88,6 +88,7 @@ class VideoProduct {
   final String title;
   final String location;
   final String description;
+  final String phoneNumber;
   final num price;
   final num stock;
   final num moq;
@@ -99,6 +100,7 @@ class VideoProduct {
     required this.location,
     required this.description,
     required this.price,
+    required this.phoneNumber,
     required this.stock,
     required this.moq,
     required this.imageUrls,
@@ -137,6 +139,7 @@ class VideoProduct {
       description: json['description'] ?? '',
       price: json['price'] ?? '',
       stock: json['stock'] ?? '',
+      phoneNumber: json['phoneNumber'] ?? '',
       moq: json['moq'] ?? '',
       imageUrls: urls,
     );
