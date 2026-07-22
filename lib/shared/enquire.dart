@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -41,13 +42,38 @@ class EnquiryList extends StatelessWidget {
                     width: 1.w,
                   ),
                 ),
-                child: CircleAvatar(
-                  backgroundColor: Colors.white,
-                  child: Icon(
-                    Icons.person_outline_rounded,
-                    color: Colors.grey.shade500,
-                    size: 20.r,
-                  ),
+                child: ClipOval(
+                  child: (entry?.profileImage != null &&
+                          entry!.profileImage!.isNotEmpty &&
+                          entry.profileImage != "null")
+                      ? CachedNetworkImage(
+                          imageUrl: entry.profileImage!,
+                          fit: BoxFit.cover,
+                          placeholder: (context, url) => CircleAvatar(
+                            backgroundColor: Colors.white,
+                            child: Icon(
+                              Icons.person_outline_rounded,
+                              color: Colors.grey.shade500,
+                              size: 20.r,
+                            ),
+                          ),
+                          errorWidget: (context, url, error) => CircleAvatar(
+                            backgroundColor: Colors.white,
+                            child: Icon(
+                              Icons.person_outline_rounded,
+                              color: Colors.grey.shade500,
+                              size: 20.r,
+                            ),
+                          ),
+                        )
+                      : CircleAvatar(
+                          backgroundColor: Colors.white,
+                          child: Icon(
+                            Icons.person_outline_rounded,
+                            color: Colors.grey.shade500,
+                            size: 20.r,
+                          ),
+                        ),
                 ),
               ),
 

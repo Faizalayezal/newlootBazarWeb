@@ -15,6 +15,7 @@ import 'package:lootbazarweb/shared/AppTextStyle.dart';
 import 'package:lootbazarweb/shared/CityPickerSheet.dart';
 import 'package:lootbazarweb/utils/preferences.dart';
 import 'package:lootbazarweb/utils/preferences_key.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
@@ -347,6 +348,24 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       ),
     );
   }
+  Future<void> openEmail() async {
+    final Uri emailUri = Uri(
+      scheme: 'mailto',
+      path: 'lootbazaartech@gmail.com',
+      queryParameters: {
+        'subject': 'Support Request',
+      },
+    );
+
+    final launched = await launchUrl(
+      emailUri,
+      mode: LaunchMode.platformDefault,
+    );
+
+    if (!launched) {
+      throw Exception('Could not launch email');
+    }
+  }
 
   void _showAboutUsSheet() {
     showModalBottomSheet(
@@ -398,18 +417,20 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     
                     // Connect Section
                     _buildInfoSection('Connect With Us', [
-                      _infoTile(Icons.email_outlined, 'Email', 'support@lootbazar.com', onTap: () {}),
-                      _infoTile(Icons.language_rounded, 'Website', 'www.lootbazar.com', onTap: () {}),
+                      _infoTile(Icons.email_outlined, 'Email', 'lootbazaartech@gmail.com', onTap: () async {
+                        await openEmail();
+                      }),
+                    //  _infoTile(Icons.language_rounded, 'Website', 'www.lootbazar.com', onTap: () {}),
                     //  _infoTile(Icons.location_on_outlined, 'Head Office', 'Agra, Uttar Pradesh', onTap: null),
                     ]),
                     
-                    SizedBox(height: 25.h),
+                  //  SizedBox(height: 25.h),
                     
                     // Legal Section
-                    _buildInfoSection('App Information', [
+                   /* _buildInfoSection('App Information', [
                       _infoTile(Icons.description_outlined, 'Terms & Conditions', 'Read our terms of service', onTap: () {}),
                       _infoTile(Icons.privacy_tip_outlined, 'Privacy Policy', 'How we handle your data', onTap: () {}),
-                    ]),
+                    ]),*/
                     
                     SizedBox(height: 40.h),
                     Text(

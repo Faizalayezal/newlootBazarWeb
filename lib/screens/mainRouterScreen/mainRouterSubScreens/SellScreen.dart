@@ -609,6 +609,7 @@ class _SellScreenState extends ConsumerState<SellScreen> {
     final String userPhone = SharedPrefs().getString(phoneNumber) ?? '';
     final String rzpKey = SharedPrefs().getString(razorpayKey) ?? 'rzp_test_T8wMbzaBD7SRid';
 
+    print("----------612>>${rzpKey}");
     if (_finalAmount == 0) {
       await ref.read(storeProductProvider.notifier).updatePaymentStatus(
         productId: productId,
@@ -624,9 +625,11 @@ class _SellScreenState extends ConsumerState<SellScreen> {
       'key': rzpKey,
       'amount': (_finalAmount * 100).toInt(),
       'name': 'LootBazar',
+      'currency': 'INR', // Explicitly add currency
       'description': 'Product Listing Fee',
       'prefill': {'contact': userPhone, 'email': ''},
       'notes': {'productId': productId, 'userId': userIdValue},
+      'retry': {'enabled': true, 'max_count': 1},
       'config': {
         'display': {
           'blocks': {
