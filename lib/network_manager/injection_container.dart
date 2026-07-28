@@ -4,7 +4,7 @@ import 'package:dio/dio.dart';
 import 'package:dio_smart_retry/dio_smart_retry.dart';
 import 'package:flutter/foundation.dart';
 import 'package:pretty_dio_logger/pretty_dio_logger.dart';
-import 'package:lootbazarweb/constant/api_constants.dart' as constants;
+import 'package:lootbazarweb/constant/api_constants.dart';
 
 
 class DioClient {
@@ -19,7 +19,7 @@ class DioClient {
   DioClient._internal() {
     dio = Dio(
       BaseOptions(
-        baseUrl: constants.ApiConstants.baseUrl,
+        baseUrl: ApiConstants.baseUrl,
         connectTimeout: const Duration(seconds: 30),
         receiveTimeout: const Duration(seconds: 30),
         contentType: Headers.jsonContentType,
