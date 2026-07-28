@@ -2,8 +2,7 @@
 
 import 'package:flutter/foundation.dart';
 import 'package:lootbazarweb/providerd/productDetail/product_detail_model.dart';
-
-import 'UploadVideoResponse.dart';
+import 'package:lootbazarweb/providerd/productDetail/upload_video_response.dart';
 
 @immutable
 class ProductDetailState {

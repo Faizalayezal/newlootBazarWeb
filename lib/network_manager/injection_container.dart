@@ -4,7 +4,7 @@ import 'package:dio/dio.dart';
 import 'package:dio_smart_retry/dio_smart_retry.dart';
 import 'package:flutter/foundation.dart';
 import 'package:pretty_dio_logger/pretty_dio_logger.dart';
-import '../constant/ApiConstants.dart';
+import '../constant/api_constants.dart';
 
 
 class DioClient {

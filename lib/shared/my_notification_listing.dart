@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:lootbazarweb/core/theme.dart';
-import 'package:lootbazarweb/providerd/notification/NotificationProduct.dart';
-import 'package:lootbazarweb/shared/AppTextStyle.dart';
+import 'package:lootbazarweb/providerd/notification/notification_product.dart';
+import 'app_text_style.dart';
 
 class MyNotificationListing extends StatelessWidget {
   final NotificationModel? notification;

@@ -1,9 +1,10 @@
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
-import 'package:lootbazarweb/response/CategoryModel.dart';
 import 'package:lootbazarweb/utils/preferences_key.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+import '../response/category_model.dart';
 
 class SharedPrefs {
   SharedPrefs._internal();

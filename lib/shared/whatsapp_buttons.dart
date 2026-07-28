@@ -3,12 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:lootbazarweb/core/theme.dart';
-import 'package:lootbazarweb/shared/AppTextStyle.dart';
 
-import 'package:flutter/material.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:flutter_svg/flutter_svg.dart';
-import 'package:lootbazarweb/shared/AppTextStyle.dart';
+import 'app_text_style.dart';
 
 class WhatsappButtons extends StatelessWidget {
   const WhatsappButtons({
@@ -42,7 +38,7 @@ class WhatsappButtons extends StatelessWidget {
                   borderRadius: BorderRadius.circular(6.r),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(.08),
+                      color: Colors.black.withValues(alpha: .08),
                       blurRadius: 8.r,
                       offset: Offset(0, 2.h),
                     ),

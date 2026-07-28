@@ -1,5 +1,4 @@
-import 'package:lootbazarweb/response/RegisterResponse.dart';
-import 'package:lootbazarweb/response/requestion_response/UpdateProfileRequest.dart';
+import '../../response/register_response.dart';
 
 class RegisterState {
   final bool isLoading;

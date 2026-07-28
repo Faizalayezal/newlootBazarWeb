@@ -1,9 +1,8 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:lootbazarweb/providerd/productDetail/product_detail_model.dart';
-import 'package:lootbazarweb/utils/AppLauncher.dart';
+import '../utils/app_launcher.dart';
 
 class EnquiryList extends StatelessWidget {
   final bool isLead;
@@ -174,7 +173,7 @@ class WhatsappBusinessCard extends StatelessWidget {
             borderRadius: BorderRadius.circular(10.r),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.04),
+                color: Colors.black.withValues(alpha: 0.04),
                 blurRadius: 10.r,
                 offset: Offset(0, 3.h),
               ),

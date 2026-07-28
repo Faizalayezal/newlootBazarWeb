@@ -1,18 +1,18 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:lootbazarweb/constant/ApiConstants.dart';
+import 'package:lootbazarweb/constant/api_constants.dart';
 import 'package:lootbazarweb/network_manager/dio_helper.dart';
-import 'package:lootbazarweb/providerd/Products/ProductModel.dart';
+import 'package:lootbazarweb/providerd/Products/product_model.dart';
 import 'package:lootbazarweb/providerd/currantUserListning/current_product_model.dart';
-import 'package:lootbazarweb/providerd/notification/NotificationProduct.dart';
-import 'package:lootbazarweb/providerd/productDetail/UploadVideoResponse.dart';
+import 'package:lootbazarweb/providerd/notification/notification_product.dart';
 import 'package:lootbazarweb/providerd/productDetail/product_detail_model.dart';
-import 'package:lootbazarweb/providerd/video/VideoListResponse.dart';
-import 'package:lootbazarweb/response/CategoryModel.dart';
-import 'package:lootbazarweb/response/RegisterResponse.dart';
-import 'package:lootbazarweb/response/UserModel.dart';
+import 'package:lootbazarweb/providerd/video/video_list_response.dart';
 import 'package:lootbazarweb/response/requestion_response/UpdateProfileRequest.dart';
+import '../providerd/productDetail/upload_video_response.dart';
+import '../response/category_model.dart';
+import '../response/register_response.dart';
+import '../response/user_model.dart';
 
 class Repository {
   final DioHelper _dioHelper = DioHelper();
@@ -69,7 +69,7 @@ class Repository {
       final response = await _dioHelper.get(
         url: '${ApiConstants.updateProfile}/$userId',
       );
-      return response as Map<String, dynamic>;
+      return response;
     } catch (e) {
       throw Exception('Get profile failed: $e');
     }
@@ -182,7 +182,7 @@ class Repository {
         url: '${ApiConstants.getCurrentUserProducts}/$userId',
       );
       // API list return karta hai, isliye List cast karo
-      return CurrentProductResponse.fromJson(response as List<dynamic>);
+      return CurrentProductResponse.fromJson(response);
     } catch (e) {
       throw Exception('Get current user products failed: $e');
     }
@@ -229,7 +229,7 @@ class Repository {
         url: ApiConstants.storeProduct,
         requestBody: formData,
       );
-      return response as Map<String, dynamic>;
+      return response;
     } catch (e) {
       throw Exception('Store product failed: $e');
     }
@@ -266,7 +266,7 @@ class Repository {
           'orderAmount': orderAmount,
         },
       );
-      return response as Map<String, dynamic>;
+      return response;
     } catch (e) {
       throw Exception('Coupon validation failed: $e');
     }
@@ -314,7 +314,7 @@ class Repository {
     try {
       final response = await _dioHelper.getList(url: ApiConstants.videosApi);
       // Response List hai directly
-      return VideoListResponse.fromJson(response as List);
+      return VideoListResponse.fromJson(response);
     } catch (e) {
       throw Exception('Get videos failed: $e');
     }

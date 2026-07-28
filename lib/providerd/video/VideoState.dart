@@ -1,6 +1,6 @@
 // lib/providers/video/video_state.dart
 
-import 'package:lootbazarweb/providerd/video/VideoListResponse.dart';
+import 'package:lootbazarweb/providerd/video/video_list_response.dart';
 
 class VideoState {
   final bool isLoading;

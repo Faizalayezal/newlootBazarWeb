@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:flutter_svg/flutter_svg.dart';
-import 'package:lootbazarweb/shared/AppTextStyle.dart';
+import 'app_text_style.dart';
 
 class StoryWhatsappButtons extends StatelessWidget {
   const StoryWhatsappButtons({
@@ -31,7 +30,7 @@ class StoryWhatsappButtons extends StatelessWidget {
           borderRadius: BorderRadius.circular(8.r),
           boxShadow: [
             BoxShadow(
-              color: Colors.green.withOpacity(0.25),
+              color: Colors.green.withValues(alpha: 0.25),
               offset: const Offset(2, 3),
               blurRadius: 12,
             ),

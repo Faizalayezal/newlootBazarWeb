@@ -4,15 +4,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:lootbazarweb/core/theme.dart';
 import 'package:lootbazarweb/route/app_router.dart';
-import 'package:lootbazarweb/tool/NotSupportedScreen.dart';
+import 'package:lootbazarweb/tool/not_supported_screen.dart';
 import 'package:lootbazarweb/url_strategy/url_strategy_stub.dart';
 import 'package:responsive_framework/responsive_framework.dart';
 import 'package:flutter/services.dart';
 import 'package:workmanager/workmanager.dart';
-import 'constant/AppToast.dart';
+import 'constant/app_toast.dart';
 import 'utils/preferences.dart';
 import 'network_manager/dio_helper.dart';
-import 'constant/ApiConstants.dart';
+import 'constant/api_constants.dart';
 
 @pragma('vm:entry-point')
 void callbackDispatcher() {
@@ -52,7 +52,6 @@ void main() async  {
   if (!kIsWeb) {
     await Workmanager().initialize(
       callbackDispatcher,
-      isInDebugMode: false,
     );
   }
 

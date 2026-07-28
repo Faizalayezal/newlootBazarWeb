@@ -1,9 +1,8 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:lootbazarweb/core/theme.dart';
-import 'package:lootbazarweb/shared/AppTextStyle.dart';
+import 'app_text_style.dart';
 
 class MyListing extends StatefulWidget {
   const MyListing({
@@ -50,7 +49,7 @@ class _MyListingState extends State<MyListing> {
             color: AppTheme.card,
             borderRadius: BorderRadius.all(Radius.circular(12.r)),
             border: Border.all(
-              color: const Color(0xFFFFDCD0).withOpacity(0.5),
+              color: const Color(0xFFFFDCD0).withValues(alpha: 0.5),
               width: 1,
             ),
           ),
@@ -72,7 +71,7 @@ class _MyListingState extends State<MyListing> {
                     child: Center(
                       child: Icon(
                         Icons.image_outlined,
-                        color: const Color(0xFFF34E17).withOpacity(0.5),
+                        color: const Color(0xFFF34E17).withValues(alpha: 0.5),
                         size: 26.sp,
                       ),
                     ),
@@ -82,7 +81,7 @@ class _MyListingState extends State<MyListing> {
                     child: Center(
                       child: Icon(
                         Icons.broken_image_outlined,
-                        color: const Color(0xFFF34E17).withOpacity(0.5),
+                        color: const Color(0xFFF34E17).withValues(alpha: 0.5),
                         size: 26.sp,
                       ),
                     ),
