@@ -1,0 +1,90 @@
+name: "PRO CI/CD: Flutter Build & Release"
+
+# Ye workflow tab chalega jab aap main ya master branch par push karenge
+on:
+  push:
+    branches: [ "main", "master" ]
+  pull_request:
+    branches: [ "main", "master" ]
+
+jobs:
+  # JOB 1: Quality Gate (Sabse pehle code quality check hogi)
+  quality_check:
+    name: "Code Quality & Tests"
+    runs-on: ubuntu-latest
+    steps:
+      - name: "Checkout code"
+        uses: actions/checkout@v4
+      
+      - name: "Set up Flutter"
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      - name: "Install dependencies"
+        run: flutter pub get
+
+      # Pro Tip: Static Analysis (Interviewer ka favourite)
+      - name: "Linting: Analyze Code"
+        run: flutter analyze
+
+      # Pro Tip: Formatting Check (Agar code properly formatted nahi hai toh build fail ho jayegi)
+      - name: "Formatting: Check Dart Format"
+        run: dart format --output=none --set-exit-if-changed .
+
+      # Testing (Unit & Widget Tests)
+      - name: "Testing: Run Tests"
+        run: flutter test
+
+  # JOB 2: Build (Quality check pass hone ke baad hi chalega)
+  build:
+    name: "Build Android & Web"
+    needs: quality_check # Ye zaroori hai "needs"
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: "Checkout code"
+        uses: actions/checkout@v4
+
+      - name: "Set up JDK 17"
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: 'gradle' # Pro Tip: Gradle caching se build fast hogi
+
+      - name: "Set up Flutter"
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      - name: "Install dependencies"
+        run: flutter pub get
+
+      # Web Build banana
+      - name: "Build: Web (Release)"
+        run: flutter build web --release
+
+      # APK Build banana (Dynamic Versioning ke saath)
+      - name: "Build: APK (Release)"
+        run: |
+          flutter build apk --release \
+          --build-number=${{ github.run_number }} \
+          --build-name=1.0.${{ github.run_number }}
+
+      # App Bundle (AAB) - Commented for now as requested
+      # - name: "Build: AAB (Release)"
+      #   run: flutter build appbundle --release --build-number=${{ github.run_number }}
+
+      # Artifacts Upload (7 days retention ke saath)
+      - name: "Upload: Artifacts"
+        uses: actions/upload-artifact@v4
+        with:
+          name: lootbazar-build-${{ github.run_number }}
+          path: |
+            build/app/outputs/flutter-apk/app-release.apk
+            # build/app/outputs/bundle/release/app-release.aab
+            build/web/
+          retention-days: 7 # Pro Tip: Space bachane ke liye cleanup
