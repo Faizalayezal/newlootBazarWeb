@@ -4,7 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:lootbazarweb/utils/preferences_key.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import '../response/category_model.dart';
+import 'package:lootbazarweb/response/category_model.dart' as model;
 
 class SharedPrefs {
   SharedPrefs._internal();
@@ -27,18 +27,18 @@ class SharedPrefs {
     return _prefs.getString(key);
   }
 
-  Future<void> saveCategories(List<CategoryModel> categories) async {
+  Future<void> saveCategories(List<model.CategoryModel> categories) async {
     final jsonList = categories.map((c) => c.toJson()).toList();
     debugPrint("Saving : $jsonList");
     await _prefs.setString(categoryKey, jsonEncode(jsonList));
     debugPrint("Saved : ${_prefs.getString(categoryKey)}");
   }
 
-  Future<List<CategoryModel>> getCategories() async {
+  Future<List<model.CategoryModel>> getCategories() async {
     final jsonString = _prefs.getString(categoryKey);
     if (jsonString == null) return [];
     final List<dynamic> jsonList = jsonDecode(jsonString);
-    return jsonList.map((e) => CategoryModel.fromJson(e)).toList();
+    return jsonList.map((e) => model.CategoryModel.fromJson(e)).toList();
   }
 
   Future<bool> hasCategories() async {

@@ -9,10 +9,10 @@ import 'package:lootbazarweb/url_strategy/url_strategy_stub.dart';
 import 'package:responsive_framework/responsive_framework.dart';
 import 'package:flutter/services.dart';
 import 'package:workmanager/workmanager.dart';
-import 'constant/app_toast.dart';
-import 'utils/preferences.dart';
-import 'network_manager/dio_helper.dart';
-import 'constant/api_constants.dart';
+import 'package:lootbazarweb/constant/app_toast.dart';
+import 'package:lootbazarweb/utils/preferences.dart';
+import 'package:lootbazarweb/network_manager/dio_helper.dart';
+import 'package:lootbazarweb/constant/api_constants.dart';
 
 @pragma('vm:entry-point')
 void callbackDispatcher() {

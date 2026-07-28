@@ -1,7 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/cupertino.dart';
 
-import 'injection_container.dart';
+import 'package:lootbazarweb/network_manager/injection_container.dart';
 
 class DioHelper {
   static final DioHelper _instance = DioHelper._internal();

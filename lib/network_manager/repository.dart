@@ -9,10 +9,10 @@ import 'package:lootbazarweb/providerd/notification/notification_product.dart';
 import 'package:lootbazarweb/providerd/productDetail/product_detail_model.dart';
 import 'package:lootbazarweb/providerd/video/video_list_response.dart';
 import 'package:lootbazarweb/response/requestion_response/UpdateProfileRequest.dart';
-import '../providerd/productDetail/upload_video_response.dart';
-import '../response/category_model.dart';
-import '../response/register_response.dart';
-import '../response/user_model.dart';
+import 'package:lootbazarweb/providerd/productDetail/upload_video_response.dart';
+import 'package:lootbazarweb/response/category_model.dart';
+import 'package:lootbazarweb/response/register_response.dart';
+import 'package:lootbazarweb/response/user_model.dart';
 
 class Repository {
   final DioHelper _dioHelper = DioHelper();
