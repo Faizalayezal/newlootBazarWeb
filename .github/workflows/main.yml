@@ -65,7 +65,7 @@ jobs:
 
       # Web Build banana
       - name: "Build: Web (Release)"
-        run: flutter build web --release
+        run: flutter build web --release --no-wasm-dry-run
 
       # APK Build banana (Dynamic Versioning ke saath)
       - name: "Build: APK (Release)"

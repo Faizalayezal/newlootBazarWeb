@@ -1,17 +1,18 @@
+// Updated for CI/CD fix
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'core/theme.dart';
-import 'route/app_router.dart';
-import 'tool/not_supported_screen.dart';
-import 'url_strategy/url_strategy_stub.dart';
+import 'package:lootbazarweb/core/theme.dart';
+import 'package:lootbazarweb/route/app_router.dart';
+import 'package:lootbazarweb/tool/not_supported_screen.dart';
+import 'package:lootbazarweb/url_strategy/url_strategy_stub.dart';
 import 'package:responsive_framework/responsive_framework.dart';
 import 'package:flutter/services.dart';
-import 'constant/app_toast.dart';
-import 'utils/preferences.dart';
-import 'network_manager/dio_helper.dart';
-import 'constant/api_constants.dart';
+import 'package:lootbazarweb/constant/app_toast.dart';
+import 'package:lootbazarweb/utils/preferences.dart';
+import 'package:lootbazarweb/network_manager/dio_helper.dart';
+import 'package:lootbazarweb/constant/api_constants.dart';
 
 // Conditional import for workmanager
 import 'package:workmanager/workmanager.dart' if (dart.library.html) 'tool/workmanager_stub.dart';
